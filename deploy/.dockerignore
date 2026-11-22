@@ -1,0 +1,18 @@
+# 镜像里不带这些：预训练权重 3~16 GB、真实合同 PDF、压测库、报告产物
+zhilv_qiling_v2/models/pretrained/
+zhilv_qiling_v2/models/bert_ner/
+zhilv_qiling_v2/models/bert_entail/
+zhilv_qiling_v2/models/bge_m3/
+data/gov_contracts/
+data/reports/
+data/reviews.sqlite
+zhilv_qiling_v2/reports/
+docs/
+paper_figures/
+tools/
+contract_review/
+.git/
+**/__pycache__/
+**/*.pyc
+*.docx
+*.pdf
