@@ -1,0 +1,262 @@
+--- a/zhilv_qiling_v2/long_context.py
++++ b/zhilv_qiling_v2/long_context.py
+@@ -7,6 +7,8 @@
+ from __future__ import annotations
+ 
+ import hashlib
++from datetime import date
++from decimal import Decimal, InvalidOperation
+ import re
+ from dataclasses import dataclass, replace
+ from typing import Any, Sequence
+@@ -49,8 +51,181 @@
+ }
+ 
+ 
++
++@dataclass(frozen=True)
++class ObligationValue:
++    """A literal value in a narrow obligation slot, never a conflict verdict."""
++    clause_id: str
++    slot: str
++    scope: str
++    value: str
++    start: int
++    end: int
++    anchor: Segment
++
++
++_PAYMENT_SLOTS = {
++    '合同总金额': 'total', '合同总价': 'total', '合同价款': 'total',
++    '预付款': 'advance', '首付款': 'first_payment', '首期款': 'first_instalment',
++    '第二期款': 'second_instalment', '第三期款': 'third_instalment',
++    '尾款': 'tail', '质保金': 'retention',
++}
++_PAYMENT_VALUE = re.compile(
++    r'(?P<slot>' + '|'.join(sorted(_PAYMENT_SLOTS, key=len, reverse=True)) + r')'
++    r'\s*(?:金额\s*)?(?:(?:应为|合计|共计|计|为|人民币|CNY|RMB|[：:￥¥])\s*)*'
++    r'(?P<number>\d+(?:[,，]\d{3})*(?:\.\d{1,2})?)\s*(?P<unit>亿元|万元|元)')
++_DATE_VALUE = re.compile(
++    r'(?<!\d)(?P<year>[12]\d{3})(?:年(?P<cm>\d{1,2})月(?P<cd>\d{1,2})日'
++    r'|(?P<sep>[-/])(?P<nm>\d{1,2})(?P=sep)(?P<nd>\d{1,2}))(?!\d)')
++_SCOPE_KINDS = {'项目': 'project', '标的': 'object', '设备': 'device', '系统': 'system', '服务': 'service'}
++_SCOPE_KIND = '|'.join(_SCOPE_KINDS)
++_SCOPE_BOUNDARY = r'(?=$|[\s，,：:。；;]|的|应|须|需|于|在|最终|全部|交付|交货|验收|' + '|'.join(_PAYMENT_SLOTS) + r')'
++_NAMED_SCOPES = (
++    re.compile(r'(?P<kind>' + _SCOPE_KIND + r')\s*[“「《\"](?P<name>[^”」》\"\n，,。；;]{1,40})[”」》\"]'),
++    re.compile(r'(?P<kind>' + _SCOPE_KIND + r')\s*(?P<name>[A-Za-z0-9][A-Za-z0-9_-]{0,29}|[甲乙丙丁戊己庚辛壬癸一二三四五六七八九十]{1,4})' + _SCOPE_BOUNDARY),
++    re.compile(r'[“「《\"](?P<name>[^”」》\"\n，,。；;]{1,40})[”」》\"]\s*(?P<kind>' + _SCOPE_KIND + r')'),
++)
++_GENERIC_SCOPE = re.compile(r'本(?P<kind>合同|项目|标的|设备|系统|服务)')
++_STAGE_WORD = r'最终|全部|初步|首批|第[一二三四五六七八九十0-9]+批'
++_DATE_EVENT = re.compile(r'(?P<stage>' + _STAGE_WORD + r')?(?P<event>交付|交货|验收)')
++_DATE_LINK_LEFT = re.compile(
++    r'^(?:日期|时间|期限|截止日期|截止日)?\s*'
++    r'(?:(?:确定为|不得晚于|不晚于|最迟|定为|应当|应|须|需|于|在|为|[：:])\s*)*$')
++_DATE_LINK_RIGHT = re.compile(
++    r'^\s*(?:之前|前|当日|之日)?\s*(?:(?:完成|进行|应|须|需|予以)\s*)*$')
++
++
++def _field_bounds(text: str, start: int, end: int) -> tuple[int, int]:
++    # Search outside the value match so the comma in 1,000 is not a delimiter.
++    marks = '。；;\n，,'
++    left = max(text.rfind(mark, 0, start) for mark in marks) + 1
++    rights = [pos for mark in marks if (pos := text.find(mark, end)) >= 0]
++    return left, min(rights) if rights else len(text)
++
++
++def _value_scope(field: str, *, contract_total: bool = False) -> str | None:
++    """Require the same explicit object, or an explicit local 本合同/本项目 scope.
++
++    Quoted Chinese names and simple alphanumeric object IDs are recognized.
++    Unparsed object names, multiple objects and missing scope cause abstention;
++    no cross-sentence scope, identity alias or commercial meaning is inferred.
++    """
++    named, spans = set(), []
++    for pattern in _NAMED_SCOPES:
++        for match in pattern.finditer(field):
++            named.add(_SCOPE_KINDS[match.group('kind')] + ':' + match.group('name').strip())
++            spans.append(match.span())
++    generic = list(_GENERIC_SCOPE.finditer(field))
++    spans.extend(match.span() for match in generic)
++    remainder = list(field)
++    for left, right in spans:
++        remainder[left:right] = ' ' * (right-left)
++    if re.search(_SCOPE_KIND, ''.join(remainder)) or len(named) > 1:
++        return None
++    if named:
++        return next(iter(named))
++    scopes = {('contract' if match.group('kind') == '合同'
++               else _SCOPE_KINDS[match.group('kind')] + ':this') for match in generic}
++    if len(scopes) == 1:
++        return next(iter(scopes))
++    return 'contract' if not scopes and contract_total else None
++
++
++def _value_anchor(clause: Clause, parts: Sequence[Segment], start: int, end: int, size: int) -> Segment:
++    containing = [part for part in parts if part.start <= start and part.end >= end]
++    if containing:
++        return max(containing, key=lambda part: min(start-part.start, part.end-end))
++    left = max(0, min(start-size//2, len(clause.text)-size))
++    right = min(len(clause.text), left+size)
++    return Segment(clause.clause_id, left, right, clause.text[left:right])
++
++
++def _stage_key(value: str | None) -> str:
++    if value in ('最终', '全部'):
++        return 'final'
++    if value == '初步':
++        return 'preliminary'
++    if value == '首批':
++        return 'batch:1'
++    if value and value.startswith('第'):
++        return 'batch:' + _reference_key(value[:-1] + '条').removeprefix('article:')
++    return 'unspecified'
++
++
++def _date_slot(field: str, value_start: int, value_end: int) -> str | None:
++    # A range, two different events, mixed milestones or a remote unrelated date
++    # must not get the same-obligation priority merely by sharing topic words.
++    events = list(_DATE_EVENT.finditer(field))
++    slots = {('delivery' if item.group('event') in ('交付', '交货') else 'acceptance',
++              _stage_key(item.group('stage'))) for item in events}
++    milestones = {_stage_key(item.group()) for item in re.finditer(_STAGE_WORD, field)}
++    if len(list(_DATE_VALUE.finditer(field))) != 1 or len(slots) != 1:
++        return None
++    event, stage = next(iter(slots))
++    if milestones and milestones != {stage}:
++        return None
++    linked = any((item.end() <= value_start and _DATE_LINK_LEFT.fullmatch(field[item.end():value_start]))
++                 or (item.start() >= value_end and _DATE_LINK_RIGHT.fullmatch(field[value_end:item.start()]))
++                 for item in events)
++    return 'date:' + event + ':' + stage if linked else None
++
++
++def _obligation_value_pairs(clauses: Sequence[Clause], segments: dict[str, list[Segment]], size: int
++                            ) -> list[tuple[ObligationValue, ObligationValue]]:
++    """Propose literal differences in the same narrow slot, without legal judgment.
++
++    The supported grammar is deliberately conservative: fixed payment-stage
++    amounts or one explicitly linked delivery/acceptance date per local field.
++    Bounds, ranges, unrecognized names and missing scope are not guessed. Source
++    conditions, precedence, amendments and actual contradictions need model/human
++    review. No exhaustive semantic coverage is asserted.
++    """
++    groups: dict[tuple[str, str], list[ObligationValue]] = {}
++    for clause in clauses:
++        for match in _PAYMENT_VALUE.finditer(clause.text):
++            left, right = _field_bounds(clause.text, match.start(), match.end())
++            field = clause.text[left:right]
++            scope = _value_scope(field, contract_total=_PAYMENT_SLOTS[match.group('slot')] == 'total')
++            if scope is None or re.search(r'预算|估算|上限|下限|最高|最低|不超过|不得超过|不少于|参考', field):
++                continue
++            tax = {'exclusive' if item in ('不含税', '未税') else 'inclusive'
++                   for item in re.findall(r'不含税|未税|含税', field)}
++            if len(tax) > 1:
++                continue
++            try:
++                value = Decimal(re.sub(r'[,，]', '', match.group('number')))
++                value *= {'元': 1, '万元': 10000, '亿元': 100000000}[match.group('unit')]
++            except InvalidOperation:
++                continue
++            slot = 'payment:' + _PAYMENT_SLOTS[match.group('slot')] + ':tax=' + next(iter(tax), 'unspecified')
++            start, end = match.start('number'), match.end('unit')
++            row = ObligationValue(clause.clause_id, slot, scope, str(value.normalize()), start, end,
++                _value_anchor(clause, segments[clause.clause_id], start, end, size))
++            groups.setdefault((slot, scope), []).append(row)
++        for match in _DATE_VALUE.finditer(clause.text):
++            left, right = _field_bounds(clause.text, match.start(), match.end())
++            field = clause.text[left:right]
++            slot = _date_slot(field, match.start()-left, match.end()-left)
++            scope = _value_scope(field)
++            if slot is None or scope is None:
++                continue
++            try:
++                value = date(int(match.group('year')), int(match.group('cm') or match.group('nm')),
++                             int(match.group('cd') or match.group('nd'))).isoformat()
++            except ValueError:
++                continue
++            row = ObligationValue(clause.clause_id, slot, scope, value, match.start(), match.end(),
++                _value_anchor(clause, segments[clause.clause_id], match.start(), match.end(), size))
++            groups.setdefault((slot, scope), []).append(row)
++    return [(left, right) for rows in groups.values() for index, left in enumerate(rows)
++            for right in rows[index+1:] if left.clause_id != right.clause_id and left.value != right.value]
++
++
+ def _window(kind: str, segments: Sequence[Segment], reason: str = "") -> ReviewWindow:
+-    key = "|".join(f"{s.clause_id}:{s.start}:{s.end}" for s in segments)
++    keys = [f"{s.clause_id}:{s.start}:{s.end}" for s in segments]
++    # Keep primary text IDs stable; reciprocal cross checks share a real call
++    # only when their complete clause/range segment sets are identical.
++    key = "|".join(sorted(set(keys)) if kind == "cross_clause" else keys)
+     return ReviewWindow(hashlib.sha256((kind + key).encode()).hexdigest()[:16],
+                         kind, tuple(segments), reason)
+ 
+@@ -270,11 +445,32 @@
+                 break
+         if len(cross) >= budget:
+             break
++    # Numeric/date anchors get the remaining budget before generic topic heads.
++    # They only propose source-value differences; they do not emit review issues.
++    obligation_pairs = _obligation_value_pairs(clauses, segments, size)
++    obligation_windows: dict[str, ReviewWindow] = {}
++    obligation_candidates = []
++    anchored_pairs = set()
++    clause_texts = {clause.clause_id: clause.text for clause in clauses}
++    for left, right in obligation_pairs:
++        reason = 'shared_obligation_value_difference:' + left.slot + ':scope=' + left.scope
++        window = _window('cross_clause', (left.anchor, right.anchor), reason)
++        obligation_windows.setdefault(window.window_id, window)
++        obligation_candidates.append({'window_id': window.window_id, 'slot': left.slot,
++            'scope': left.scope, 'candidate_only': True, 'legal_conflict_proven': False,
++            'values': [{'clause_id': item.clause_id, 'start': item.start, 'end': item.end,
++                        'source_value': clause_texts[item.clause_id][item.start:item.end],
++                        'normalized_value': item.value, 'anchor': _segment_range(item.anchor)}
++                       for item in (left, right)]})
++        if len(cross) < budget:
++            cross.setdefault(window.window_id, window)
++        if window.window_id in cross:
++            anchored_pairs.add(tuple(sorted((left.clause_id, right.clause_id), key=positions.get)))
+     # Ordinary shared-topic pairs remain targeted, one representative window
+     # each. They never claim exhaustive inference and never displace references.
+     words = tuple(w for group in TOPICS.values() for w in group)
+     for (left_id, right_id), (_, reason) in ordered:
+-        if (left_id, right_id) in explicit_pairs or len(cross) >= budget:
++        if (left_id, right_id) in explicit_pairs or (left_id, right_id) in anchored_pairs or len(cross) >= budget:
+             continue
+         selected = []
+         for cid in (left_id, right_id):
+@@ -295,11 +491,14 @@
+     explicit_pending = sum(d["pending_checks"] for d in dependency_plans)
+     explicit_plan_complete = not reference_issues and not explicit_pending
+     topic_not_scheduled = sum(pair not in scheduled_pairs for pair, _ in ordered if pair not in explicit_pairs)
++    obligation_pending = sum(window_id not in cross for window_id in obligation_windows)
++    candidate_pairs = set(pairs) | {tuple(sorted((left.clause_id, right.clause_id), key=positions.get))
++                                    for left, right in obligation_pairs}
+     meta = {
+         "total_clauses": len(clauses), "total_chars": sum(len(c.text) for c in clauses),
+         "text_windows": sum(w.kind == "text" for w in windows),
+-        "cross_windows": len(cross_windows), "cross_pairs_candidates": len(ordered),
+-        "cross_pairs_not_scheduled": sum(pair not in scheduled_pairs for pair, _ in ordered),
++        "cross_windows": len(cross_windows), "cross_pairs_candidates": len(candidate_pairs),
++        "cross_pairs_not_scheduled": sum(pair not in scheduled_pairs for pair in candidate_pairs),
+         "cross_window_budget": budget, "cross_budget_unit": "bounded_cross_clause_windows",
+         "cross_max_window_chars": 3 * size,
+         "explicit_reference_dependencies": dependency_plans,
+@@ -311,9 +510,14 @@
+         "explicit_reference_plan_complete": explicit_plan_complete,
+         "explicit_reference_scope": "reference_anchor_with_all_source_target_segment_pairs_for_resolved_contract_labels",
+         "topic_pairs_not_scheduled": topic_not_scheduled,
+-        "cross_plan_complete": explicit_plan_complete and not topic_not_scheduled,
++        "cross_plan_complete": explicit_plan_complete and not topic_not_scheduled and not obligation_pending,
+         "cross_scope": "targeted_dependency_pairs_not_exhaustive",
+-        "cross_pair_generation": "explicit_reference+topic_neighbours+topic_endpoints",
++        "cross_pair_generation": "explicit_reference+same_obligation_value_difference+topic_neighbours+topic_endpoints",
++        "obligation_value_candidates": obligation_candidates,
++        "obligation_value_windows_candidates": len(obligation_windows),
++        "obligation_value_windows_scheduled": sum(window_id in cross for window_id in obligation_windows),
++        "obligation_value_windows_pending": obligation_pending,
++        "obligation_value_scope": "same_explicit_object_or_local_generic_scope_and_same_stage_event_tax_basis; candidate_not_legal_conflict; narrow_grammar_not_exhaustive",
+         "potential_topic_pairs_upper_bound": sum(len(ids)*(len(ids)-1)//2 for ids in groups.values()),
+         "chunk_chars": size, "overlap": max(0, min(int(overlap), size // 3)),
+     }

@@ -1,0 +1,145 @@
+--- a/zhilv_qiling_v2/llm_client.py
++++ b/zhilv_qiling_v2/llm_client.py
+@@ -51,6 +51,7 @@
+     prompt_chars: int = 0
+     degraded: str = ""
+     reason_code: str = ""
++    call_id: str = ""
+ 
+     def summary(self) -> str:
+         if self.degraded:
+@@ -494,6 +495,7 @@
+     json_schema: dict[str, Any] | None = None,
+     max_tokens: int | None = None,
+     retries: int = 2,
++    audit_context: dict[str, str] | None = None,
+ ) -> LLMPair:
+     """发对话请求并解析 JSON；解析失败按 retries 做"纠正重试"。
+ 
+@@ -503,6 +505,16 @@
+     比空口重问有效（不贴回去模型会重复同样的错）。
+     """
+     from . import model_audit
++    binding: dict[str, str] = {}
++    if audit_context is not None:
++        required = {"window_id", "job_id", "source_sha256"}
++        if (not isinstance(audit_context, dict) or set(audit_context) != required
++                or not all(isinstance(audit_context.get(key), str) for key in required)
++                or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,200}", audit_context.get("window_id", ""))
++                or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,240}", audit_context.get("job_id", ""))
++                or not re.fullmatch(r"[0-9a-f]{64}", audit_context.get("source_sha256", ""))):
++            raise LLMClientError("调用审计绑定字段不完整或无效")
++        binding = dict(audit_context)
+     schema_sent = config.native_json_schema is True and json_schema is not None
+     schema_hash = ""
+     bound_schema = None
+@@ -539,7 +551,7 @@
+                 "prompt_chars": sum(len(item.get("content", "")) for item in convo),
+                 "native_thinking": config.native_thinking, "native_reasoning_format": config.native_reasoning_format,
+                 "native_json_schema_requested": json_schema is not None,
+-                "native_json_schema_sent": schema_sent, "json_schema_sha256": schema_hash}
++                "native_json_schema_sent": schema_sent, "json_schema_sha256": schema_hash, **binding}
+         model_audit.record("llm", config.model, "request_json", "started", **meta)
+         transport = replace(current, extra_headers={**current.extra_headers, "X-ZLQL-Call-ID": call_id,
+                                                     "X-ZLQL-Trace-ID": model_audit.scope_metadata()["trace_id"]})
+@@ -627,6 +639,7 @@
+             prompt_chars=sum(len(item.get("content", "")) for item in convo),
+             degraded=reason,
+             reason_code=reason_code,
++            call_id=call_id,
+         )
+     raise last or LLMClientError("未知失败")
+ 
+--- a/zhilv_qiling_v2/nodes.py
++++ b/zhilv_qiling_v2/nodes.py
+@@ -26,6 +26,7 @@
+ """
+ from __future__ import annotations
+ 
++import hashlib
+ import json
+ import re
+ import time
+@@ -711,6 +712,13 @@
+                 "feedback_context_chars": len(json.dumps(bounded_feedback, ensure_ascii=False)),
+                 **{key: job[key] for key in ("job_id", "batch_index", "batch_count", "feedback_item_ids",
+                                             "feedback_items_in_other_batches")}}
++        # Bind the exact source segments sent for this job, without duplicating
++        # contract text in the persistent model audit. No legacy order inference.
++        call["source_spans"] = [{"clause_id": part.clause_id, "start": part.start, "end": part.end}
++                                for part in window.segments]
++        call["source_sha256"] = hashlib.sha256(json.dumps(
++            [part.as_dict() for part in window.segments], ensure_ascii=False,
++            sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")).hexdigest()
+         if native_selection:
+             root = "subject_fact_verifications" if fact_feedback else "verifications"
+             selections = native_schema["properties"][root]["items"]["properties"]["clause_quote"]["enum"]
+@@ -722,7 +730,8 @@
+                 degraded.append("llm_feedback_clause_source_unavailable")
+                 continue
+         try:
+-            request_options: dict[str, Any] = {"schema_hint": schema_hint}
++            request_options: dict[str, Any] = {"schema_hint": schema_hint, "audit_context": {
++                key: call[key] for key in ("window_id", "job_id", "source_sha256")}}
+             if native_schema is not None:
+                 request_options["json_schema"] = native_schema
+             pair = L.request_json(client_config, messages, **request_options)
+@@ -735,6 +744,7 @@
+                 degraded.append("llm_circuit_open_after_3_errors")
+                 break
+             continue
++        call["call_id"] = str(getattr(pair, "call_id", "") or "")
+         if bounded_feedback:
+             call["feedback_response"] = _feedback_response_snapshot(pair.content, len(bounded_feedback))
+         if not isinstance(pair.content, dict) or not isinstance(pair.content.get("defects", [] if bounded_feedback else None), list):
+--- a/zhilv_qiling_v2/model_audit.py
++++ b/zhilv_qiling_v2/model_audit.py
+@@ -26,7 +26,7 @@
+ _CONTEXT: contextvars.ContextVar[AuditCollector | None] = contextvars.ContextVar("model_audit", default=None)
+ _LOCK = threading.RLock()
+ _ERRORS: list[str] = []
+-_ALLOWED = {"call_id", "requested_model", "actual_model", "attempt", "max_tokens", "prompt_chars", "input_sha256",
++_ALLOWED = {"call_id", "window_id", "job_id", "source_sha256", "requested_model", "actual_model", "attempt", "max_tokens", "prompt_chars", "input_sha256",
+             "finish_reason", "pairs", "backend", "device", "quant", "load_seconds", "error_type",
+             "http_status", "response_format", "parse_retries", "missing_keys", "unexpected_keys", "reason_code",
+             "prompt_tokens", "completion_tokens", "total_tokens", "model_identity_verified",
+--- a/zhilv_qiling_v2/agents_multi_run.py
++++ b/zhilv_qiling_v2/agents_multi_run.py
+@@ -593,10 +593,20 @@
+                                      verification_feedback=relevant_checks,
+                                      subject_fact_feedback=subject_feedback)
+                 outcome.candidates = dedupe_candidates(outcome.candidates + fresh.candidates)
++                attempt_index = len(outcome.payload.get("feedback_runs", [])) + 1
++                attempt_binding = {"attempt_id": stable_id("fb_attempt", ctx.contract.contract_id,
++                        feedback_key, ctx.shared.get("round", 1), attempt_index, length=24),
++                    "attempt_index": attempt_index, "fingerprint": feedback_key,
++                    "round": ctx.shared.get("round", 1),
++                    "run_sha256": hashlib.sha256(json.dumps(fresh.llm, sort_keys=True,
++                        ensure_ascii=False, separators=(",", ":"), allow_nan=False).encode("utf-8")).hexdigest()}
++                outcome.payload.setdefault("feedback_run_bindings", []).append(attempt_binding)
++                ctx.shared.setdefault("feedback_latest_binding", {})[feedback_key] = copy.deepcopy(attempt_binding)
+                 outcome.payload.setdefault("feedback_runs", []).append(fresh.llm)
+                 ctx.shared.setdefault("feedback_latest", {})[feedback_key] = copy.deepcopy(fresh.llm)
+                 outcome.payload.setdefault("feedback_attempts", []).append({
+                     "fingerprint": feedback_key, "round": ctx.shared.get("round", 1),
++                    "attempt_id": attempt_binding["attempt_id"], "attempt_index": attempt_index,
+                     "complete": fresh.llm.get("complete") is True and fresh.llm.get("feedback_complete") is True})
+                 outcome.degraded.extend(fresh.degraded)
+                 if (fresh.llm.get("complete") is True and fresh.llm.get("feedback_complete") is True
+@@ -941,6 +951,16 @@
+     current = ctx.shared.get("feedback_latest", {}).get(final_feedback["fingerprint"])
+     logic_llm["feedback_latest_runs"] = [current] if current is not None else []
+     logic_llm["feedback_attempts"] = getattr(logic, "payload", {}).get("feedback_attempts", [])
++    logic_llm["feedback_run_bindings"] = getattr(logic, "payload", {}).get("feedback_run_bindings", [])
++    current_key, _, current_subject, current_focus, current_statutes, current_facts = _feedback_request(ctx)
++    current_binding = ctx.shared.get("feedback_latest_binding", {}).get(final_feedback["fingerprint"])
++    logic_llm["feedback_current_request"] = {
++        "required": final_feedback["required"], "fingerprint": final_feedback["fingerprint"],
++        "attempt_id": current_binding.get("attempt_id") if current_binding is not None else None,
++        "attempt_index": current_binding.get("attempt_index") if current_binding is not None else None,
++        "focus_clause_ids": sorted(current_focus), "items": copy.deepcopy([*current_statutes, *current_facts]),
++        "subject_verification_complete": current_subject.get("verification_complete"),
++        "pending_subject_request_ids": list(current_subject.get("pending_verification_request_ids", []))}
+     logic_llm["feedback_runs_complete"] = bool(not final_feedback["pending"] and all(
+         run.get("complete", False) and run.get("feedback_complete", False)
+         for run in logic_llm["feedback_latest_runs"]))

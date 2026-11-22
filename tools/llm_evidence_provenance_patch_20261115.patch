@@ -1,0 +1,32 @@
+--- a/zhilv_qiling_v2/nodes.py
++++ b/zhilv_qiling_v2/nodes.py
+@@ -851,10 +851,25 @@
+                 "partial_model_output": partial_output,
+                 "cross_clause_verified": len(verified) > 1,
+                 "related_clause_ids": [x[0] for x in verified]})
+-            for other, other_quote in verified[1:]:
+-                candidate.clause_ids.append(other)
+-                candidate.spans.append(R.contract_span(by_id[other], by_id[other].text.find(other_quote), other_quote))
+-                candidate.evidence_append("cross_clause_quote", f"{other}: {other_quote}", 0.7, "node2_llm")
++            # Preserve the accepted model observation on its own evidence;
++            # FinalRisk intentionally does not carry candidate.extra.
++            bound_model_quotes = [{"clause_id": source_cid, "quote": source_quote,
++                "quote_exact_source_match": any(source_quote in text for text in sent.get(source_cid, []))}
++                for source_cid, source_quote in verified]
++            model_provenance = {"candidate_id": candidate.candidate_id, "window_id": window.window_id,
++                "job_id": job["job_id"], "call_id": str(call.get("call_id") or ""),
++                "source_sha256": call["source_sha256"], "partial_model_output": partial_output,
++                "model_message": message, "issue_code": code}
++            for quote_index, (other, other_quote) in enumerate(verified):
++                evidence_start = len(candidate.evidence) if quote_index else 0
++                if quote_index:
++                    candidate.clause_ids.append(other)
++                    candidate.spans.append(R.contract_span(by_id[other], by_id[other].text.find(other_quote), other_quote))
++                    candidate.evidence_append("cross_clause_quote", f"{other}: {other_quote}", 0.7, "node2_llm")
++                for evidence in candidate.evidence[evidence_start:]:
++                    if evidence.source == "node2_llm":
++                        evidence.extra.update(model_provenance, **bound_model_quotes[quote_index],
++                            bound_model_quotes=[dict(row) for row in bound_model_quotes])
+             candidates.append(candidate)
+             accepted += 1
+     record_coverage()

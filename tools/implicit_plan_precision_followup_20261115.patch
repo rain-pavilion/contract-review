@@ -1,0 +1,34 @@
+--- a/zhilv_qiling_v2/long_context.py
++++ b/zhilv_qiling_v2/long_context.py
+@@ -88,6 +88,7 @@
+ _GENERIC_SCOPE = re.compile(r'本(?P<kind>合同|项目|标的|设备|系统|服务)')
+ _STAGE_WORD = r'最终|全部|初步|首批|第[一二三四五六七八九十0-9]+批'
+ _DATE_EVENT = re.compile(r'(?P<stage>' + _STAGE_WORD + r')?(?P<event>交付|交货|验收)')
++_EXAMPLE_VALUE_FIELD = re.compile(r'示例|例如|假设|演示|样例')
+ _DATE_LINK_LEFT = re.compile(
+     r'^(?:日期|时间|期限|截止日期|截止日)?\s*'
+     r'(?:(?:确定为|不得晚于|不晚于|最迟|定为|应当|应|须|需|于|在|为|[：:])\s*)*$')
+@@ -186,10 +187,10 @@
+             left, right = _field_bounds(clause.text, match.start(), match.end())
+             field = clause.text[left:right]
+             scope = _value_scope(field, contract_total=_PAYMENT_SLOTS[match.group('slot')] == 'total')
+-            if scope is None or re.search(r'预算|估算|上限|下限|最高|最低|不超过|不得超过|不少于|参考', field):
+-                continue
+-            tax = {'exclusive' if item in ('不含税', '未税') else 'inclusive'
+-                   for item in re.findall(r'不含税|未税|含税', field)}
++            if scope is None or _EXAMPLE_VALUE_FIELD.search(field) or re.search(r'预算|估算|上限|下限|最高|最低|不超过|不得超过|不少于|参考', field):
++                continue
++            tax = {'exclusive' if item in ('不含税', '未税', '税前') else 'inclusive'
++                   for item in re.findall(r'不含税|未税|税前|含税|税后', field)}
+             if len(tax) > 1:
+                 continue
+             try:
+@@ -207,7 +208,7 @@
+             field = clause.text[left:right]
+             slot = _date_slot(field, match.start()-left, match.end()-left)
+             scope = _value_scope(field)
+-            if slot is None or scope is None:
++            if slot is None or scope is None or _EXAMPLE_VALUE_FIELD.search(field):
+                 continue
+             try:
+                 value = date(int(match.group('year')), int(match.group('cm') or match.group('nm')),

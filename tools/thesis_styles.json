@@ -1,0 +1,1594 @@
+{
+  "source_docx": "D:/xwechat_files/wxid_gsy7l1w31fm522_d68f/msg/file/2026-10/计科4班彭雅玲_conv.docx",
+  "generated_from": "python-docx 实测（样式解算含 basedOn 继承，字体未显式设置时落到 docDefaults）",
+  "doc_defaults": {
+    "fonts": {
+      "ascii": "Times New Roman",
+      "eastAsia": "宋体",
+      "hAnsi": "Times New Roman",
+      "cs": "Times New Roman"
+    },
+    "size_pt": null,
+    "lang": {
+      "en": "en-US",
+      "zh": "zh-CN"
+    }
+  },
+  "sections": [
+    {
+      "index": 0,
+      "page_width_cm": 21.001,
+      "page_height_cm": 29.7,
+      "orient": "portrait",
+      "margin_top_cm": 2.54,
+      "margin_bottom_cm": 2.54,
+      "margin_left_cm": 3.18,
+      "margin_right_cm": 3.18,
+      "header_distance_cm": 1.501,
+      "footer_distance_cm": 1.101,
+      "gutter_cm": 0.0,
+      "start_type": "NEW_PAGE (2)",
+      "odd_and_even_pages_header_footer": false,
+      "different_first_page": false,
+      "page_number_format": "upperRoman",
+      "page_number_start": "1",
+      "doc_grid": {
+        "type": "lines",
+        "line_pitch": "326"
+      },
+      "text_width_cm": 14.64,
+      "text_height_cm": 24.62
+    },
+    {
+      "index": 1,
+      "page_width_cm": 21.001,
+      "page_height_cm": 29.7,
+      "orient": "portrait",
+      "margin_top_cm": 2.54,
+      "margin_bottom_cm": 2.54,
+      "margin_left_cm": 3.18,
+      "margin_right_cm": 3.18,
+      "header_distance_cm": 1.501,
+      "footer_distance_cm": 1.101,
+      "gutter_cm": 0.0,
+      "start_type": "NEW_PAGE (2)",
+      "odd_and_even_pages_header_footer": false,
+      "different_first_page": false,
+      "page_number_format": "upperRoman",
+      "page_number_start": "1",
+      "doc_grid": {
+        "type": "lines",
+        "line_pitch": "326"
+      },
+      "text_width_cm": 14.64,
+      "text_height_cm": 24.62
+    },
+    {
+      "index": 2,
+      "page_width_cm": 21.001,
+      "page_height_cm": 29.7,
+      "orient": "portrait",
+      "margin_top_cm": 2.54,
+      "margin_bottom_cm": 2.54,
+      "margin_left_cm": 3.18,
+      "margin_right_cm": 3.18,
+      "header_distance_cm": 1.501,
+      "footer_distance_cm": 1.101,
+      "gutter_cm": 0.0,
+      "start_type": "NEW_PAGE (2)",
+      "odd_and_even_pages_header_footer": false,
+      "different_first_page": false,
+      "page_number_format": "upperRoman",
+      "page_number_start": "1",
+      "doc_grid": {
+        "type": "lines",
+        "line_pitch": "326"
+      },
+      "text_width_cm": 14.64,
+      "text_height_cm": 24.62
+    },
+    {
+      "index": 3,
+      "page_width_cm": 21.001,
+      "page_height_cm": 29.7,
+      "orient": "portrait",
+      "margin_top_cm": 2.54,
+      "margin_bottom_cm": 2.54,
+      "margin_left_cm": 3.18,
+      "margin_right_cm": 3.18,
+      "header_distance_cm": 1.501,
+      "footer_distance_cm": 1.101,
+      "gutter_cm": 0.0,
+      "start_type": "NEW_PAGE (2)",
+      "odd_and_even_pages_header_footer": false,
+      "different_first_page": false,
+      "page_number_format": "decimal",
+      "page_number_start": "1",
+      "doc_grid": {
+        "type": "lines",
+        "line_pitch": "326"
+      },
+      "text_width_cm": 14.64,
+      "text_height_cm": 24.62
+    }
+  ],
+  "numbering": {
+    "num_map": {
+      "1": 2,
+      "2": 0,
+      "3": 4,
+      "4": 3,
+      "5": 1
+    },
+    "abstract_num": {
+      "2": {
+        "lvl0": {
+          "text": "第%1章  ",
+          "fmt": "decimal",
+          "jc": "center"
+        },
+        "lvl1": {
+          "text": "%1.%2  ",
+          "fmt": "decimal",
+          "jc": "left"
+        },
+        "usage": "numId=1，标题多级列表（论文1/2/3级标题样式自带）"
+      },
+      "0": {
+        "lvl0": {
+          "text": "（%1）",
+          "fmt": "decimal",
+          "jc": "left"
+        },
+        "usage": "numId=2，正文中文括号列表"
+      },
+      "4": {
+        "lvl0": {
+          "text": "（%1）",
+          "fmt": "decimal",
+          "jc": "left"
+        },
+        "usage": "numId=3"
+      },
+      "3": {
+        "lvl0": {
+          "text": "（%1）",
+          "fmt": "decimal",
+          "jc": "left"
+        },
+        "usage": "numId=4"
+      },
+      "1": {
+        "lvl0": {
+          "text": "[%1]",
+          "fmt": "decimal",
+          "jc": "left"
+        },
+        "lvl1": {
+          "text": "%2)",
+          "fmt": "lowerLetter",
+          "jc": "left"
+        },
+        "usage": "numId=5，参考文献顺序编码 [1]"
+      }
+    },
+    "critical_note": "样本每个标题段落都带 <w:numPr><w:ilvl w:val=\"0\"/><w:numId w:val=\"0\"/></w:numPr>，即显式关闭样式自带自动编号；章号「第1章」「1.1」「1.2.1」是正文里写的字面文本。生成器必须同样加 numId=0 覆盖，否则会出现双重编号。"
+  },
+  "paragraph_direct_format": {
+    "论文1级标题": {
+      "numPr": "ilvl=0 numId=0",
+      "spacing_before_twips": 326,
+      "text_examples": [
+        "第1章  绪论",
+        "第2章   关键技术简介",
+        "结论"
+      ]
+    },
+    "论文2级标题": {
+      "numPr": "numId=0",
+      "spacing_before_twips": 163,
+      "text_examples": [
+        "1.1   研究背景及意义"
+      ]
+    },
+    "论文3级标题": {
+      "numPr": "numId=0",
+      "keepLines": 0,
+      "widowControl": 0,
+      "spacing_before_twips": 163
+    },
+    "论文正文": {
+      "ind_firstLine_twips": 480,
+      "note": "480 twips = 0.85 cm = 12pt 正文的 2 字符；上标引用是 REF 域"
+    },
+    "Caption": {
+      "ind_firstLine_twips": 0,
+      "ind_firstLineChars": 0,
+      "spacing_line": "360 auto (1.5 倍)",
+      "note": "清掉样式自带 420 twips 首行缩进；文字 run 不加粗"
+    },
+    "目录标题格式": {
+      "spacing_before_twips": 326,
+      "spacing_after_twips": 326
+    },
+    "toc": {
+      "tab_right_pos_twips": 8290,
+      "tab_leader": "dot",
+      "spacing_line": "360 auto",
+      "size_pt_override": 11.0,
+      "ind": {
+        "toc 1": "firstLine 0",
+        "toc 2": "left 480",
+        "toc 3": "left 960"
+      }
+    }
+  },
+  "cover_measured": {
+    "layout": [
+      "空段(Normal)",
+      "「毕业论文」居中 42pt(含 kern=2)",
+      "空段 28pt",
+      "题目表 2x2",
+      "间隔段 sz=14pt 带下划线",
+      "信息表 3x4",
+      "日期 14pt 居中(ind firstLine=560)",
+      "空段",
+      "目录标题格式「目录」"
+    ],
+    "title_font_pt": 42.0,
+    "title_table": {
+      "rows": 2,
+      "cols": 2,
+      "grid_twips": [
+        2314,
+        6065
+      ],
+      "cell_font_pt": 22.0,
+      "bold": true,
+      "label_align": "right",
+      "value_align": "both"
+    },
+    "info_table": {
+      "rows": 3,
+      "cols": 4,
+      "grid_twips": [
+        1659,
+        2456,
+        1565,
+        2457
+      ],
+      "cell_font_pt": 14.0,
+      "bold_label": true,
+      "labels": [
+        "学生姓名：",
+        "指导老师：",
+        "学    号：",
+        "参考文献：",
+        "专    业：",
+        "论文字数："
+      ]
+    },
+    "date_font_pt": 14.0,
+    "note": "样本信息表用 tblpPr 浮动定位；生成器用等宽无边框固定表格等价实现。"
+  },
+  "table_measured": {
+    "style_name": "Normal Table",
+    "borders": {
+      "top": "single sz=12 (1.5pt)",
+      "bottom": "single sz=12 (1.5pt)",
+      "insideH": "none",
+      "insideV": "none"
+    },
+    "cell_font_pt": 10.5,
+    "cell_alignment": "center",
+    "cell_first_line_indent": 0,
+    "header_bold": false,
+    "table_alignment": "center",
+    "note": "样本表体是「上下粗线、内部无线」的三线表；用户要求默认用 Table Grid，生成器同时提供 three_line=True 复刻样本。"
+  },
+  "abstract_measured": {
+    "摘要标题": {
+      "style": "Normal",
+      "direct": "黑体 粗体 12pt 居中，outlineLvl=0，spacing before/after 326 twips，line 240 auto(单倍)"
+    },
+    "Abstract标题": {
+      "style": "Normal",
+      "direct": "黑体 粗体 12pt 居中，pageBreakBefore，outlineLvl=0"
+    },
+    "关键词段": {
+      "label": "「关键词」黑体粗体",
+      "content_pt": 10.5,
+      "separator": "；",
+      "first_line_indent": 0
+    },
+    "Keywords段": {
+      "label": "「Keywords」粗体",
+      "content_pt": 10.5,
+      "separator": "; ",
+      "first_line_indent": 0
+    },
+    "参考文献标题": {
+      "style": "Normal",
+      "direct": "黑体粗体 12pt 居中 outlineLvl=0，页首用 run 内 <w:br w:type=\"page\"/> 分页",
+      "note": "与「结论」用论文1级标题不一致，生成器统一改用论文1级标题"
+    }
+  },
+  "styles": {
+    "Normal": {
+      "name": "Normal",
+      "style_id": "a",
+      "type": "PARAGRAPH",
+      "base_style": null,
+      "builtin": true,
+      "quick_style": true,
+      "font": {
+        "ascii": "Times New Roman",
+        "eastAsia": "宋体",
+        "hAnsi": "Times New Roman",
+        "cs": "Times New Roman"
+      },
+      "size_pt": 12.0,
+      "bold": false,
+      "italic": false,
+      "alignment": "left",
+      "line_spacing": {
+        "rule": "auto",
+        "raw": "300",
+        "multiple": 1.25,
+        "exact_pt": null
+      },
+      "space_before": {
+        "twips": null,
+        "pt": null,
+        "lines": null,
+        "effective_pt": null,
+        "precedence": "twips"
+      },
+      "space_after": {
+        "twips": null,
+        "pt": null,
+        "lines": null,
+        "effective_pt": null,
+        "precedence": "twips"
+      },
+      "first_line_indent": {
+        "twips": "200",
+        "cm": 0.353,
+        "chars": 2.0,
+        "effective_cm": 0.847,
+        "precedence": "chars"
+      },
+      "left_indent": {
+        "twips": null,
+        "cm": null,
+        "chars": null,
+        "effective_cm": null,
+        "precedence": "twips"
+      },
+      "outline_level": null,
+      "keep_with_next": false,
+      "keep_lines": false,
+      "page_break_before": false,
+      "widow_control": true,
+      "snap_to_grid": true
+    },
+    "Heading 1": {
+      "name": "Heading 1",
+      "style_id": "1",
+      "type": "PARAGRAPH",
+      "base_style": "Normal",
+      "builtin": true,
+      "quick_style": true,
+      "font": {
+        "ascii": "Times New Roman",
+        "eastAsia": "黑体",
+        "hAnsi": "Times New Roman",
+        "cs": "Times New Roman"
+      },
+      "size_pt": 18.0,
+      "bold": false,
+      "italic": false,
+      "alignment": "center",
+      "line_spacing": {
+        "rule": "auto",
+        "raw": "300",
+        "multiple": 1.25,
+        "exact_pt": null
+      },
+      "space_before": {
+        "twips": "100",
+        "pt": 5.0,
+        "lines": 1.0,
+        "effective_pt": 16.3,
+        "precedence": "lines"
+      },
+      "space_after": {
+        "twips": "50",
+        "pt": 2.5,
+        "lines": 0.5,
+        "effective_pt": 8.15,
+        "precedence": "lines"
+      },
+      "first_line_indent": {
+        "twips": "0",
+        "cm": 0.0,
+        "chars": 0.0,
+        "effective_cm": 0.0,
+        "precedence": "chars"
+      },
+      "left_indent": {
+        "twips": null,
+        "cm": null,
+        "chars": null,
+        "effective_cm": null,
+        "precedence": "twips"
+      },
+      "outline_level": 0,
+      "keep_with_next": true,
+      "keep_lines": true,
+      "page_break_before": false,
+      "widow_control": true,
+      "snap_to_grid": true
+    },
+    "Heading 2": {
+      "name": "Heading 2",
+      "style_id": "2",
+      "type": "PARAGRAPH",
+      "base_style": "Normal",
+      "builtin": true,
+      "quick_style": true,
+      "font": {
+        "ascii": "等线 Light",
+        "eastAsia": "等线 Light",
+        "hAnsi": "等线 Light",
+        "cs": "Times New Roman"
+      },
+      "size_pt": 16.0,
+      "bold": true,
+      "italic": false,
+      "alignment": "left",
+      "line_spacing": {
+        "rule": "auto",
+        "raw": "416",
+        "multiple": 1.733,
+        "exact_pt": null
+      },
+      "space_before": {
+        "twips": "260",
+        "pt": 13.0,
+        "lines": null,
+        "effective_pt": 13.0,
+        "precedence": "twips"
+      },
+      "space_after": {
+        "twips": "260",
+        "pt": 13.0,
+        "lines": null,
+        "effective_pt": 13.0,
+        "precedence": "twips"
+      },
+      "first_line_indent": {
+        "twips": "200",
+        "cm": 0.353,
+        "chars": 2.0,
+        "effective_cm": 1.129,
+        "precedence": "chars"
+      },
+      "left_indent": {
+        "twips": null,
+        "cm": null,
+        "chars": null,
+        "effective_cm": null,
+        "precedence": "twips"
+      },
+      "outline_level": 1,
+      "keep_with_next": true,
+      "keep_lines": true,
+      "page_break_before": false,
+      "widow_control": true,
+      "snap_to_grid": true
+    },
+    "Heading 3": {
+      "name": "Heading 3",
+      "style_id": "3",
+      "type": "PARAGRAPH",
+      "base_style": "Normal",
+      "builtin": true,
+      "quick_style": true,
+      "font": {
+        "ascii": "Times New Roman",
+        "eastAsia": "宋体",
+        "hAnsi": "Times New Roman",
+        "cs": "Times New Roman"
+      },
+      "size_pt": 16.0,
+      "bold": true,
+      "italic": false,
+      "alignment": "left",
+      "line_spacing": {
+        "rule": "auto",
+        "raw": "416",
+        "multiple": 1.733,
+        "exact_pt": null
+      },
+      "space_before": {
+        "twips": "260",
+        "pt": 13.0,
+        "lines": null,
+        "effective_pt": 13.0,
+        "precedence": "twips"
+      },
+      "space_after": {
+        "twips": "260",
+        "pt": 13.0,
+        "lines": null,
+        "effective_pt": 13.0,
+        "precedence": "twips"
+      },
+      "first_line_indent": {
+        "twips": "200",
+        "cm": 0.353,
+        "chars": 2.0,
+        "effective_cm": 1.129,
+        "precedence": "chars"
+      },
+      "left_indent": {
+        "twips": null,
+        "cm": null,
+        "chars": null,
+        "effective_cm": null,
+        "precedence": "twips"
+      },
+      "outline_level": 2,
+      "keep_with_next": true,
+      "keep_lines": true,
+      "page_break_before": false,
+      "widow_control": true,
+      "snap_to_grid": true
+    },
+    "Heading 4": {
+      "name": "Heading 4",
+      "style_id": "4",
+      "type": "PARAGRAPH",
+      "base_style": "Normal",
+      "builtin": true,
+      "quick_style": true,
+      "font": {
+        "ascii": "等线 Light",
+        "eastAsia": "等线 Light",
+        "hAnsi": "等线 Light",
+        "cs": "Times New Roman"
+      },
+      "size_pt": 14.0,
+      "bold": true,
+      "italic": false,
+      "alignment": "left",
+      "line_spacing": {
+        "rule": "auto",
+        "raw": "376",
+        "multiple": 1.567,
+        "exact_pt": null
+      },
+      "space_before": {
+        "twips": "280",
+        "pt": 14.0,
+        "lines": null,
+        "effective_pt": 14.0,
+        "precedence": "twips"
+      },
+      "space_after": {
+        "twips": "290",
+        "pt": 14.5,
+        "lines": null,
+        "effective_pt": 14.5,
+        "precedence": "twips"
+      },
+      "first_line_indent": {
+        "twips": "200",
+        "cm": 0.353,
+        "chars": 2.0,
+        "effective_cm": 0.988,
+        "precedence": "chars"
+      },
+      "left_indent": {
+        "twips": null,
+        "cm": null,
+        "chars": null,
+        "effective_cm": null,
+        "precedence": "twips"
+      },
+      "outline_level": 3,
+      "keep_with_next": true,
+      "keep_lines": true,
+      "page_break_before": false,
+      "widow_control": true,
+      "snap_to_grid": true
+    },
+    "Normal Table": {
+      "name": "Normal Table",
+      "style_id": "a1",
+      "type": "TABLE",
+      "base_style": null,
+      "builtin": true,
+      "quick_style": false,
+      "font": {
+        "ascii": "Times New Roman",
+        "eastAsia": "宋体",
+        "hAnsi": "Times New Roman",
+        "cs": "Times New Roman"
+      },
+      "size_pt": null,
+      "bold": false,
+      "italic": false,
+      "alignment": "left",
+      "line_spacing": {
+        "rule": "auto",
+        "raw": null,
+        "multiple": null,
+        "exact_pt": null
+      },
+      "space_before": {
+        "twips": null,
+        "pt": null,
+        "lines": null,
+        "effective_pt": null,
+        "precedence": "twips"
+      },
+      "space_after": {
+        "twips": null,
+        "pt": null,
+        "lines": null,
+        "effective_pt": null,
+        "precedence": "twips"
+      },
+      "first_line_indent": {
+        "twips": null,
+        "cm": null,
+        "chars": null,
+        "effective_cm": null,
+        "precedence": "twips"
+      },
+      "left_indent": {
+        "twips": null,
+        "cm": null,
+        "chars": null,
+        "effective_cm": null,
+        "precedence": "twips"
+      },
+      "outline_level": null,
+      "keep_with_next": false,
+      "keep_lines": false,
+      "page_break_before": false,
+      "widow_control": true,
+      "snap_to_grid": true
+    },
+    "Caption": {
+      "name": "Caption",
+      "style_id": "a3",
+      "type": "PARAGRAPH",
+      "base_style": "Normal",
+      "builtin": true,
+      "quick_style": true,
+      "font": {
+        "ascii": "Times New Roman",
+        "eastAsia": "黑体",
+        "hAnsi": "Times New Roman",
+        "cs": "Times New Roman"
+      },
+      "size_pt": 10.5,
+      "bold": false,
+      "italic": false,
+      "alignment": "center",
+      "line_spacing": {
+        "rule": "auto",
+        "raw": "300",
+        "multiple": 1.25,
+        "exact_pt": null
+      },
+      "space_before": {
+        "twips": null,
+        "pt": null,
+        "lines": null,
+        "effective_pt": null,
+        "precedence": "twips"
+      },
+      "space_after": {
+        "twips": null,
+        "pt": null,
+        "lines": null,
+        "effective_pt": null,
+        "precedence": "twips"
+      },
+      "first_line_indent": {
+        "twips": "420",
+        "cm": 0.741,
+        "chars": null,
+        "effective_cm": 0.741,
+        "precedence": "twips"
+      },
+      "left_indent": {
+        "twips": null,
+        "cm": null,
+        "chars": null,
+        "effective_cm": null,
+        "precedence": "twips"
+      },
+      "outline_level": null,
+      "keep_with_next": false,
+      "keep_lines": false,
+      "page_break_before": false,
+      "widow_control": true,
+      "snap_to_grid": true
+    },
+    "toc 3": {
+      "name": "toc 3",
+      "style_id": "TOC3",
+      "type": "PARAGRAPH",
+      "base_style": "Normal",
+      "builtin": true,
+      "quick_style": false,
+      "font": {
+        "ascii": "Times New Roman",
+        "eastAsia": "宋体",
+        "hAnsi": "Times New Roman",
+        "cs": "Times New Roman"
+      },
+      "size_pt": 12.0,
+      "bold": false,
+      "italic": false,
+      "alignment": "left",
+      "line_spacing": {
+        "rule": "auto",
+        "raw": "300",
+        "multiple": 1.25,
+        "exact_pt": null
+      },
+      "space_before": {
+        "twips": null,
+        "pt": null,
+        "lines": null,
+        "effective_pt": null,
+        "precedence": "twips"
+      },
+      "space_after": {
+        "twips": null,
+        "pt": null,
+        "lines": null,
+        "effective_pt": null,
+        "precedence": "twips"
+      },
+      "first_line_indent": {
+        "twips": "200",
+        "cm": 0.353,
+        "chars": 2.0,
+        "effective_cm": 0.847,
+        "precedence": "chars"
+      },
+      "left_indent": {
+        "twips": "840",
+        "cm": 1.482,
+        "chars": 4.0,
+        "effective_cm": 1.693,
+        "precedence": "chars"
+      },
+      "outline_level": null,
+      "keep_with_next": false,
+      "keep_lines": false,
+      "page_break_before": false,
+      "widow_control": true,
+      "snap_to_grid": true
+    },
+    "Footer": {
+      "name": "Footer",
+      "style_id": "ad",
+      "type": "PARAGRAPH",
+      "base_style": "Normal",
+      "builtin": true,
+      "quick_style": false,
+      "font": {
+        "ascii": "Times New Roman",
+        "eastAsia": "宋体",
+        "hAnsi": "Times New Roman",
+        "cs": "Times New Roman"
+      },
+      "size_pt": 9.0,
+      "bold": false,
+      "italic": false,
+      "alignment": "left",
+      "line_spacing": {
+        "rule": "auto",
+        "raw": "300",
+        "multiple": 1.25,
+        "exact_pt": null
+      },
+      "space_before": {
+        "twips": null,
+        "pt": null,
+        "lines": null,
+        "effective_pt": null,
+        "precedence": "twips"
+      },
+      "space_after": {
+        "twips": null,
+        "pt": null,
+        "lines": null,
+        "effective_pt": null,
+        "precedence": "twips"
+      },
+      "first_line_indent": {
+        "twips": "200",
+        "cm": 0.353,
+        "chars": 2.0,
+        "effective_cm": 0.635,
+        "precedence": "chars"
+      },
+      "left_indent": {
+        "twips": null,
+        "cm": null,
+        "chars": null,
+        "effective_cm": null,
+        "precedence": "twips"
+      },
+      "outline_level": null,
+      "keep_with_next": false,
+      "keep_lines": false,
+      "page_break_before": false,
+      "widow_control": true,
+      "snap_to_grid": false
+    },
+    "Header": {
+      "name": "Header",
+      "style_id": "af",
+      "type": "PARAGRAPH",
+      "base_style": "Normal",
+      "builtin": true,
+      "quick_style": false,
+      "font": {
+        "ascii": "Times New Roman",
+        "eastAsia": "宋体",
+        "hAnsi": "Times New Roman",
+        "cs": "Times New Roman"
+      },
+      "size_pt": 9.0,
+      "bold": false,
+      "italic": false,
+      "alignment": "both",
+      "line_spacing": {
+        "rule": "auto",
+        "raw": "240",
+        "multiple": 1.0,
+        "exact_pt": null
+      },
+      "space_before": {
+        "twips": null,
+        "pt": null,
+        "lines": null,
+        "effective_pt": null,
+        "precedence": "twips"
+      },
+      "space_after": {
+        "twips": null,
+        "pt": null,
+        "lines": null,
+        "effective_pt": null,
+        "precedence": "twips"
+      },
+      "first_line_indent": {
+        "twips": "200",
+        "cm": 0.353,
+        "chars": 2.0,
+        "effective_cm": 0.635,
+        "precedence": "chars"
+      },
+      "left_indent": {
+        "twips": null,
+        "cm": null,
+        "chars": null,
+        "effective_cm": null,
+        "precedence": "twips"
+      },
+      "outline_level": null,
+      "keep_with_next": false,
+      "keep_lines": false,
+      "page_break_before": false,
+      "widow_control": true,
+      "snap_to_grid": false
+    },
+    "toc 1": {
+      "name": "toc 1",
+      "style_id": "TOC1",
+      "type": "PARAGRAPH",
+      "base_style": "Normal",
+      "builtin": true,
+      "quick_style": false,
+      "font": {
+        "ascii": "Times New Roman",
+        "eastAsia": "宋体",
+        "hAnsi": "Times New Roman",
+        "cs": "Times New Roman"
+      },
+      "size_pt": 12.0,
+      "bold": false,
+      "italic": false,
+      "alignment": "left",
+      "line_spacing": {
+        "rule": "auto",
+        "raw": "300",
+        "multiple": 1.25,
+        "exact_pt": null
+      },
+      "space_before": {
+        "twips": null,
+        "pt": null,
+        "lines": null,
+        "effective_pt": null,
+        "precedence": "twips"
+      },
+      "space_after": {
+        "twips": null,
+        "pt": null,
+        "lines": null,
+        "effective_pt": null,
+        "precedence": "twips"
+      },
+      "first_line_indent": {
+        "twips": "200",
+        "cm": 0.353,
+        "chars": 2.0,
+        "effective_cm": 0.847,
+        "precedence": "chars"
+      },
+      "left_indent": {
+        "twips": null,
+        "cm": null,
+        "chars": null,
+        "effective_cm": null,
+        "precedence": "twips"
+      },
+      "outline_level": null,
+      "keep_with_next": false,
+      "keep_lines": false,
+      "page_break_before": false,
+      "widow_control": true,
+      "snap_to_grid": true
+    },
+    "toc 2": {
+      "name": "toc 2",
+      "style_id": "TOC2",
+      "type": "PARAGRAPH",
+      "base_style": "Normal",
+      "builtin": true,
+      "quick_style": false,
+      "font": {
+        "ascii": "Times New Roman",
+        "eastAsia": "宋体",
+        "hAnsi": "Times New Roman",
+        "cs": "Times New Roman"
+      },
+      "size_pt": 12.0,
+      "bold": false,
+      "italic": false,
+      "alignment": "left",
+      "line_spacing": {
+        "rule": "auto",
+        "raw": "300",
+        "multiple": 1.25,
+        "exact_pt": null
+      },
+      "space_before": {
+        "twips": null,
+        "pt": null,
+        "lines": null,
+        "effective_pt": null,
+        "precedence": "twips"
+      },
+      "space_after": {
+        "twips": null,
+        "pt": null,
+        "lines": null,
+        "effective_pt": null,
+        "precedence": "twips"
+      },
+      "first_line_indent": {
+        "twips": "200",
+        "cm": 0.353,
+        "chars": 2.0,
+        "effective_cm": 0.847,
+        "precedence": "chars"
+      },
+      "left_indent": {
+        "twips": "420",
+        "cm": 0.741,
+        "chars": 2.0,
+        "effective_cm": 0.847,
+        "precedence": "chars"
+      },
+      "outline_level": null,
+      "keep_with_next": false,
+      "keep_lines": false,
+      "page_break_before": false,
+      "widow_control": true,
+      "snap_to_grid": true
+    },
+    "Table Grid": {
+      "name": "Table Grid",
+      "style_id": "af8",
+      "type": "TABLE",
+      "base_style": "Normal Table",
+      "builtin": true,
+      "quick_style": false,
+      "font": {
+        "ascii": "Times New Roman",
+        "eastAsia": "宋体",
+        "hAnsi": "Times New Roman",
+        "cs": "Times New Roman"
+      },
+      "size_pt": null,
+      "bold": false,
+      "italic": false,
+      "alignment": "both",
+      "line_spacing": {
+        "rule": "auto",
+        "raw": null,
+        "multiple": null,
+        "exact_pt": null
+      },
+      "space_before": {
+        "twips": null,
+        "pt": null,
+        "lines": null,
+        "effective_pt": null,
+        "precedence": "twips"
+      },
+      "space_after": {
+        "twips": null,
+        "pt": null,
+        "lines": null,
+        "effective_pt": null,
+        "precedence": "twips"
+      },
+      "first_line_indent": {
+        "twips": null,
+        "cm": null,
+        "chars": null,
+        "effective_cm": null,
+        "precedence": "twips"
+      },
+      "left_indent": {
+        "twips": null,
+        "cm": null,
+        "chars": null,
+        "effective_cm": null,
+        "precedence": "twips"
+      },
+      "outline_level": null,
+      "keep_with_next": false,
+      "keep_lines": false,
+      "page_break_before": false,
+      "widow_control": false,
+      "snap_to_grid": true
+    },
+    "论文3级标题": {
+      "name": "论文3级标题",
+      "style_id": "32",
+      "type": "PARAGRAPH",
+      "base_style": "Heading 3",
+      "builtin": false,
+      "quick_style": true,
+      "font": {
+        "ascii": "Times New Roman",
+        "eastAsia": "宋体",
+        "hAnsi": "Times New Roman",
+        "cs": "Times New Roman"
+      },
+      "size_pt": 12.0,
+      "bold": true,
+      "italic": false,
+      "alignment": "left",
+      "line_spacing": {
+        "rule": "auto",
+        "raw": "360",
+        "multiple": 1.5,
+        "exact_pt": null
+      },
+      "space_before": {
+        "twips": "50",
+        "pt": 2.5,
+        "lines": 0.5,
+        "effective_pt": 8.15,
+        "precedence": "lines"
+      },
+      "space_after": {
+        "twips": "0",
+        "pt": 0.0,
+        "lines": null,
+        "effective_pt": 0.0,
+        "precedence": "twips"
+      },
+      "first_line_indent": {
+        "twips": null,
+        "cm": null,
+        "chars": 0.0,
+        "effective_cm": 0.0,
+        "precedence": "chars"
+      },
+      "left_indent": {
+        "twips": null,
+        "cm": null,
+        "chars": null,
+        "effective_cm": null,
+        "precedence": "twips"
+      },
+      "outline_level": 2,
+      "keep_with_next": true,
+      "keep_lines": true,
+      "page_break_before": false,
+      "widow_control": true,
+      "snap_to_grid": false
+    },
+    "论文4级标题": {
+      "name": "论文4级标题",
+      "style_id": "41",
+      "type": "PARAGRAPH",
+      "base_style": "Heading 4",
+      "builtin": false,
+      "quick_style": true,
+      "font": {
+        "ascii": "Times New Roman",
+        "eastAsia": "宋体",
+        "hAnsi": "Times New Roman",
+        "cs": "Times New Roman"
+      },
+      "size_pt": 12.0,
+      "bold": false,
+      "italic": false,
+      "alignment": "left",
+      "line_spacing": {
+        "rule": "auto",
+        "raw": "360",
+        "multiple": 1.5,
+        "exact_pt": null
+      },
+      "space_before": {
+        "twips": "0",
+        "pt": 0.0,
+        "lines": null,
+        "effective_pt": 0.0,
+        "precedence": "twips"
+      },
+      "space_after": {
+        "twips": "0",
+        "pt": 0.0,
+        "lines": null,
+        "effective_pt": 0.0,
+        "precedence": "twips"
+      },
+      "first_line_indent": {
+        "twips": null,
+        "cm": null,
+        "chars": 0.0,
+        "effective_cm": 0.0,
+        "precedence": "chars"
+      },
+      "left_indent": {
+        "twips": null,
+        "cm": null,
+        "chars": null,
+        "effective_cm": null,
+        "precedence": "twips"
+      },
+      "outline_level": 3,
+      "keep_with_next": true,
+      "keep_lines": true,
+      "page_break_before": false,
+      "widow_control": true,
+      "snap_to_grid": true
+    },
+    "论文2级标题": {
+      "name": "论文2级标题",
+      "style_id": "21",
+      "type": "PARAGRAPH",
+      "base_style": "Heading 2",
+      "builtin": false,
+      "quick_style": true,
+      "font": {
+        "ascii": "Times New Roman",
+        "eastAsia": "黑体",
+        "hAnsi": "Times New Roman",
+        "cs": "Times New Roman"
+      },
+      "size_pt": 12.0,
+      "bold": true,
+      "italic": false,
+      "alignment": "left",
+      "line_spacing": {
+        "rule": "auto",
+        "raw": "360",
+        "multiple": 1.5,
+        "exact_pt": null
+      },
+      "space_before": {
+        "twips": "50",
+        "pt": 2.5,
+        "lines": 0.5,
+        "effective_pt": 8.15,
+        "precedence": "lines"
+      },
+      "space_after": {
+        "twips": "0",
+        "pt": 0.0,
+        "lines": null,
+        "effective_pt": 0.0,
+        "precedence": "twips"
+      },
+      "first_line_indent": {
+        "twips": null,
+        "cm": null,
+        "chars": 0.0,
+        "effective_cm": 0.0,
+        "precedence": "chars"
+      },
+      "left_indent": {
+        "twips": null,
+        "cm": null,
+        "chars": null,
+        "effective_cm": null,
+        "precedence": "twips"
+      },
+      "outline_level": 1,
+      "keep_with_next": true,
+      "keep_lines": false,
+      "page_break_before": false,
+      "widow_control": false,
+      "snap_to_grid": true
+    },
+    "论文1级标题": {
+      "name": "论文1级标题",
+      "style_id": "14",
+      "type": "PARAGRAPH",
+      "base_style": "Heading 1",
+      "builtin": false,
+      "quick_style": true,
+      "font": {
+        "ascii": "Times New Roman",
+        "eastAsia": "黑体",
+        "hAnsi": "Times New Roman",
+        "cs": "Times New Roman"
+      },
+      "size_pt": 14.0,
+      "bold": true,
+      "italic": false,
+      "alignment": "center",
+      "line_spacing": {
+        "rule": "auto",
+        "raw": "360",
+        "multiple": 1.5,
+        "exact_pt": null
+      },
+      "space_before": {
+        "twips": "100",
+        "pt": 5.0,
+        "lines": 1.0,
+        "effective_pt": 16.3,
+        "precedence": "lines"
+      },
+      "space_after": {
+        "twips": "0",
+        "pt": 0.0,
+        "lines": 0.0,
+        "effective_pt": 0.0,
+        "precedence": "lines"
+      },
+      "first_line_indent": {
+        "twips": "0",
+        "cm": 0.0,
+        "chars": 0.0,
+        "effective_cm": 0.0,
+        "precedence": "chars"
+      },
+      "left_indent": {
+        "twips": null,
+        "cm": null,
+        "chars": null,
+        "effective_cm": null,
+        "precedence": "twips"
+      },
+      "outline_level": 0,
+      "keep_with_next": true,
+      "keep_lines": false,
+      "page_break_before": true,
+      "widow_control": false,
+      "snap_to_grid": true
+    },
+    "论文正文": {
+      "name": "论文正文",
+      "style_id": "aff3",
+      "type": "PARAGRAPH",
+      "base_style": "Normal",
+      "builtin": false,
+      "quick_style": true,
+      "font": {
+        "ascii": "Times New Roman",
+        "eastAsia": "宋体",
+        "hAnsi": "Times New Roman",
+        "cs": "Times New Roman"
+      },
+      "size_pt": 12.0,
+      "bold": false,
+      "italic": false,
+      "alignment": "both",
+      "line_spacing": {
+        "rule": "auto",
+        "raw": "360",
+        "multiple": 1.5,
+        "exact_pt": null
+      },
+      "space_before": {
+        "twips": null,
+        "pt": null,
+        "lines": null,
+        "effective_pt": null,
+        "precedence": "twips"
+      },
+      "space_after": {
+        "twips": null,
+        "pt": null,
+        "lines": null,
+        "effective_pt": null,
+        "precedence": "twips"
+      },
+      "first_line_indent": {
+        "twips": "200",
+        "cm": 0.353,
+        "chars": 2.0,
+        "effective_cm": 0.847,
+        "precedence": "chars"
+      },
+      "left_indent": {
+        "twips": null,
+        "cm": null,
+        "chars": null,
+        "effective_cm": null,
+        "precedence": "twips"
+      },
+      "outline_level": null,
+      "keep_with_next": false,
+      "keep_lines": false,
+      "page_break_before": false,
+      "widow_control": true,
+      "snap_to_grid": false
+    },
+    "图注": {
+      "name": "图注",
+      "style_id": "aff7",
+      "type": "PARAGRAPH",
+      "base_style": "论文正文",
+      "builtin": false,
+      "quick_style": true,
+      "font": {
+        "ascii": "Times New Roman",
+        "eastAsia": "黑体",
+        "hAnsi": "Times New Roman",
+        "cs": "Times New Roman"
+      },
+      "size_pt": 10.5,
+      "bold": false,
+      "italic": false,
+      "alignment": "center",
+      "line_spacing": {
+        "rule": "auto",
+        "raw": "360",
+        "multiple": 1.5,
+        "exact_pt": null
+      },
+      "space_before": {
+        "twips": null,
+        "pt": null,
+        "lines": null,
+        "effective_pt": null,
+        "precedence": "twips"
+      },
+      "space_after": {
+        "twips": null,
+        "pt": null,
+        "lines": null,
+        "effective_pt": null,
+        "precedence": "twips"
+      },
+      "first_line_indent": {
+        "twips": "0",
+        "cm": 0.0,
+        "chars": 0.0,
+        "effective_cm": 0.0,
+        "precedence": "chars"
+      },
+      "left_indent": {
+        "twips": null,
+        "cm": null,
+        "chars": null,
+        "effective_cm": null,
+        "precedence": "twips"
+      },
+      "outline_level": null,
+      "keep_with_next": false,
+      "keep_lines": false,
+      "page_break_before": false,
+      "widow_control": true,
+      "snap_to_grid": false
+    },
+    "表格标题": {
+      "name": "表格标题",
+      "style_id": "aff9",
+      "type": "PARAGRAPH",
+      "base_style": "论文正文",
+      "builtin": false,
+      "quick_style": true,
+      "font": {
+        "ascii": "Times New Roman",
+        "eastAsia": "黑体",
+        "hAnsi": "Times New Roman",
+        "cs": "Times New Roman"
+      },
+      "size_pt": 10.5,
+      "bold": false,
+      "italic": false,
+      "alignment": "center",
+      "line_spacing": {
+        "rule": "auto",
+        "raw": "360",
+        "multiple": 1.5,
+        "exact_pt": null
+      },
+      "space_before": {
+        "twips": null,
+        "pt": null,
+        "lines": null,
+        "effective_pt": null,
+        "precedence": "twips"
+      },
+      "space_after": {
+        "twips": null,
+        "pt": null,
+        "lines": null,
+        "effective_pt": null,
+        "precedence": "twips"
+      },
+      "first_line_indent": {
+        "twips": "0",
+        "cm": 0.0,
+        "chars": 0.0,
+        "effective_cm": 0.0,
+        "precedence": "chars"
+      },
+      "left_indent": {
+        "twips": null,
+        "cm": null,
+        "chars": null,
+        "effective_cm": null,
+        "precedence": "twips"
+      },
+      "outline_level": null,
+      "keep_with_next": false,
+      "keep_lines": false,
+      "page_break_before": false,
+      "widow_control": true,
+      "snap_to_grid": false
+    },
+    "表格内容": {
+      "name": "表格内容",
+      "style_id": "affb",
+      "type": "PARAGRAPH",
+      "base_style": "Normal",
+      "builtin": false,
+      "quick_style": true,
+      "font": {
+        "ascii": "Times New Roman",
+        "eastAsia": "宋体",
+        "hAnsi": "Times New Roman",
+        "cs": "Times New Roman"
+      },
+      "size_pt": 10.5,
+      "bold": false,
+      "italic": false,
+      "alignment": "center",
+      "line_spacing": {
+        "rule": "auto",
+        "raw": "300",
+        "multiple": 1.25,
+        "exact_pt": null
+      },
+      "space_before": {
+        "twips": null,
+        "pt": null,
+        "lines": null,
+        "effective_pt": null,
+        "precedence": "twips"
+      },
+      "space_after": {
+        "twips": null,
+        "pt": null,
+        "lines": null,
+        "effective_pt": null,
+        "precedence": "twips"
+      },
+      "first_line_indent": {
+        "twips": "0",
+        "cm": 0.0,
+        "chars": 0.0,
+        "effective_cm": 0.0,
+        "precedence": "chars"
+      },
+      "left_indent": {
+        "twips": null,
+        "cm": null,
+        "chars": null,
+        "effective_cm": null,
+        "precedence": "twips"
+      },
+      "outline_level": null,
+      "keep_with_next": false,
+      "keep_lines": false,
+      "page_break_before": false,
+      "widow_control": false,
+      "snap_to_grid": true
+    },
+    "目录标题格式": {
+      "name": "目录标题格式",
+      "style_id": "affd",
+      "type": "PARAGRAPH",
+      "base_style": "Normal",
+      "builtin": false,
+      "quick_style": true,
+      "font": {
+        "ascii": "黑体",
+        "eastAsia": "黑体",
+        "hAnsi": "黑体",
+        "cs": "Times New Roman"
+      },
+      "size_pt": 16.0,
+      "bold": true,
+      "italic": false,
+      "alignment": "center",
+      "line_spacing": {
+        "rule": "auto",
+        "raw": "240",
+        "multiple": 1.0,
+        "exact_pt": null
+      },
+      "space_before": {
+        "twips": "333",
+        "pt": 16.65,
+        "lines": 1.0,
+        "effective_pt": 16.3,
+        "precedence": "lines"
+      },
+      "space_after": {
+        "twips": "333",
+        "pt": 16.65,
+        "lines": 1.0,
+        "effective_pt": 16.3,
+        "precedence": "lines"
+      },
+      "first_line_indent": {
+        "twips": "0",
+        "cm": 0.0,
+        "chars": 0.0,
+        "effective_cm": 0.0,
+        "precedence": "chars"
+      },
+      "left_indent": {
+        "twips": null,
+        "cm": null,
+        "chars": null,
+        "effective_cm": null,
+        "precedence": "twips"
+      },
+      "outline_level": null,
+      "keep_with_next": false,
+      "keep_lines": false,
+      "page_break_before": true,
+      "widow_control": true,
+      "snap_to_grid": true
+    }
+  }
+}
