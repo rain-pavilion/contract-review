@@ -1,0 +1,86 @@
+{
+  "schema_version": "public-case-reference-v1",
+  "origin_index": "tools/paper_sources_20261117/public_cases/case_reference_index.jsonl",
+  "origin_index_sha256": "8be47859cc408728756c5fe676a5c22afd47cb0b9bff4aaf16c68ba2645f1c18",
+  "source_article_sha256": {
+    "case15_chinacourt": "5aa44ff05e787eebcf31cd51000b0fc5b167df692a2df0b4b9b856f6efaef2d1",
+    "case17_chinacourt": "04d91e24b7b203e89340b58741d42d9ad328011a0c6860d5164d1e2ceaa78f26"
+  },
+  "judgment_dates_note": "Checked verbatim dates in the source 裁判结果 section; 2007-10 has month precision only",
+  "usage": {
+    "historical_reference_only": true,
+    "automatic_training_allowed": false,
+    "independent_human_gold": false,
+    "subject_current_facts_verified": false,
+    "public_fulltext_republication_allowed": false
+  },
+  "items": [
+    {
+      "case_id": "case15_chinacourt",
+      "case_name": "徐工集团工程机械股份有限公司诉成都川交工贸有限责任公司等买卖合同纠纷案",
+      "guiding_case_number": 15,
+      "original_published_date": "2013-01-31",
+      "web_publication_date": "2013-02-07 08:25:20",
+      "trial_courts": [
+        "江苏省徐州市中级人民法院",
+        "江苏省高级人民法院"
+      ],
+      "case_numbers": [
+        "（2009）徐民二初字第0065号",
+        "（2011）苏商终字第0107号"
+      ],
+      "focus": [
+        "买卖合同货款",
+        "关联公司人格混同",
+        "连带责任"
+      ],
+      "summary": "供应商请求支付货款；案件根据关联公司人员、业务、财务交叉及财产难以区分等事实审查公司人格混同，认定相应公司承担连带清偿责任。",
+      "source_url": "https://www.chinacourt.cn/article/detail/2013/02/id/893723.shtml",
+      "source_publisher": "中国法院网，来源人民法院报",
+      "judgment_dates": [
+        {
+          "stage": "一审",
+          "date": "2011-04-10"
+        },
+        {
+          "stage": "二审",
+          "date": "2011-10-19"
+        }
+      ]
+    },
+    {
+      "case_id": "case17_chinacourt",
+      "case_name": "张莉诉北京合力华通汽车服务有限公司买卖合同纠纷案",
+      "guiding_case_number": 17,
+      "original_published_date": "2013-11-08",
+      "web_publication_date": "2013-11-26 08:27:56",
+      "trial_courts": [
+        "北京市朝阳区人民法院",
+        "北京市第二中级人民法院"
+      ],
+      "case_numbers": [
+        "（2007）朝民初字第18230号",
+        "（2008）二中民终字第00453号"
+      ],
+      "focus": [
+        "汽车买卖合同",
+        "瑕疵告知",
+        "证据冲突",
+        "消费欺诈"
+      ],
+      "summary": "购车合同约定交付新车，车辆交付前已维修；销售者关于已告知的证据不足，法院认定其隐瞒瑕疵构成销售欺诈，并支持退车及相应赔偿。",
+      "source_url": "https://www.chinacourt.cn/article/detail/2013/11/id/1150419.shtml",
+      "source_publisher": "中国法院网，来源人民法院报",
+      "judgment_dates": [
+        {
+          "stage": "一审",
+          "date": "2007-10"
+        },
+        {
+          "stage": "二审",
+          "date": "2008-03-13"
+        }
+      ]
+    }
+  ]
+}
