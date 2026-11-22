@@ -1,0 +1,461 @@
+% ============================================================================
+% 智律契灵 v2 升级参考文献（GB/T 7714-2015 风格信息齐备的 BibTeX）
+% 检索与核验日期：2026-11
+% 说明：
+%   1) 所有 DOI / 卷期 / 页码均照抄核验页面（arXiv abs 页、出版商 DOI 页、
+%      期刊官网"引用本文"块、官方仓库 bibtex），未做任何推测构造。
+%   2) 未能核验到页码者，在 note 字段明确写"页码待核"，并在 pages 留空，
+%      引用时应写为"（页码待核）"。
+%   3) language 字段：zh = 中文文献；en = 英文文献。共 34 条，中文 8 条。
+%   4) 字符编码 UTF-8。
+% ============================================================================
+
+
+% ---------------------------------------------------------------------------
+% A. 文档解析 / 版面分析 / OCR（4 条）
+% ---------------------------------------------------------------------------
+
+@inproceedings{layoutlmv3_2022,
+  author    = {Huang, Yupan and Lv, Tengchao and Cui, Lei and Lu, Yutong and Wei, Furu},
+  title     = {{LayoutLMv3}: Pre-training for Document {AI} with Unified Text and Image Masking},
+  booktitle = {Proceedings of the 30th ACM International Conference on Multimedia (MM '22)},
+  address   = {New York},
+  publisher = {ACM},
+  year      = {2022},
+  pages     = {4083--4091},
+  doi       = {10.1145/3503161.3548112},
+  url       = {https://arxiv.org/abs/2204.08387},
+  language  = {en},
+  note      = {预印本 arXiv:2204.08387；核验：arXiv abs 页 + ACM DOI 页}
+}
+
+@inproceedings{donut_2022,
+  author    = {Kim, Geewook and Hong, Teakgyu and Yim, Moonbin and Nam, JeongYeon and Park, Jinyoung and Yim, Jinyeong and Hwang, Wonseok and Yun, Sangdoo and Han, Dongyoon and Park, Seunghyun},
+  title     = {{OCR}-free Document Understanding Transformer},
+  booktitle = {Computer Vision -- ECCV 2022},
+  address   = {Cham},
+  publisher = {Springer},
+  year      = {2022},
+  doi       = {10.1007/978-3-031-19809-0_28},
+  url       = {https://arxiv.org/abs/2111.15664},
+  language  = {en},
+  note      = {官方实现 https://github.com/clovaai/donut （MIT）；核验：arXiv abs 页；RVL-CDIP 95.30\%，推理 752\,ms，参数 143M}
+}
+
+@misc{ppocr_2020,
+  author       = {Du, Yuning and Li, Chenxia and Guo, Runze and Yin, Xiaoting and Liu, Weiwei and Zhou, Jun and Bai, Yifan and Yu, Zilin and Yang, Yehua and Dang, Qingqing and Wang, Haoshuang},
+  title        = {{PP-OCR}: A Practical Ultra Lightweight {OCR} System},
+  howpublished = {arXiv preprint arXiv:2009.09941},
+  year         = {2020},
+  doi          = {10.48550/arXiv.2009.09941},
+  url          = {https://arxiv.org/abs/2009.09941},
+  language     = {en},
+  note         = {后续版本 PP-OCRv2: arXiv:2109.03144；PP-OCRv3: arXiv:2206.03001；核验：arXiv abs 页 + PaddleOCR 官方引用页}
+}
+
+@misc{mineru_2024,
+  author       = {Wang, Bin and Xu, Chao and Zhao, Xiaomeng and Ouyang, Linke and Wu, Fan and Zhao, Zhiyuan and Xu, Rui and Liu, Kaiwen and Qu, Yuan and Shang, Fukai and Zhang, Bo and Wei, Liange and Sui, Zhihao and Li, Wei and Shi, Botian and Qiao, Yu and Lin, Dahua and He, Conghui},
+  title        = {{MinerU}: An Open-Source Solution for Precise Document Content Extraction},
+  howpublished = {arXiv preprint arXiv:2409.18839},
+  year         = {2024},
+  url          = {https://arxiv.org/abs/2409.18839},
+  language     = {en},
+  note         = {官方仓库 https://github.com/opendatalab/MinerU ；核验：arXiv abs 页 + 仓库 README}
+}
+
+
+% ---------------------------------------------------------------------------
+% B. 要素抽取 / NER / 信息抽取（4 条）
+% ---------------------------------------------------------------------------
+
+@inproceedings{w2ner_2022,
+  author    = {Li, Jingye and Fei, Hao and Liu, Jiang and Wu, Shengqiong and Zhang, Meishan and Teng, Chong and Ji, Donghong and Li, Fei},
+  title     = {Unified Named Entity Recognition as Word-Word Relation Classification},
+  booktitle = {Proceedings of the AAAI Conference on Artificial Intelligence (AAAI-22)},
+  year      = {2022},
+  volume    = {36},
+  number    = {10},
+  pages     = {10965--10973},
+  doi       = {10.1609/aaai.v36i10.21344},
+  url       = {https://arxiv.org/abs/2112.10070},
+  language  = {en},
+  note      = {核验：arXiv abs 页 + AAAI OJS 摘要页 21344}
+}
+
+@inproceedings{uie_2022,
+  author    = {Lu, Yaojie and Liu, Qing and Dai, Dai and Xiao, Xinyan and Lin, Hongyu and Han, Xianpei and Sun, Le and Wu, Hua},
+  title     = {Unified Structure Generation for Universal Information Extraction},
+  booktitle = {Proceedings of the 60th Annual Meeting of the Association for Computational Linguistics (ACL 2022)},
+  address   = {Stroudsburg, PA},
+  publisher = {ACL},
+  year      = {2022},
+  pages     = {5755--5772},
+  doi       = {10.18653/v1/2022.acl-long.395},
+  url       = {https://arxiv.org/abs/2203.12277},
+  language  = {en},
+  note      = {项目页 https://universal-ie.github.io/ ；核验：arXiv abs 页 + 项目页}
+}
+
+@misc{bilstmcrf_2015,
+  author       = {Huang, Zhiheng and Xu, Wei and Yu, Kai},
+  title        = {Bidirectional {LSTM-CRF} Models for Sequence Tagging},
+  howpublished = {arXiv preprint arXiv:1508.01991},
+  year         = {2015},
+  url          = {https://arxiv.org/abs/1508.01991},
+  language     = {en},
+  note         = {核验：arXiv abs 页全文}
+}
+
+@article{guo2022ner,
+  author   = {郭力华 and 李旸 and 王素格 and 陈鑫 and 符玉杰 and 裴文生},
+  title    = {基于匹配策略和社区注意力机制的法律文书命名实体识别},
+  journal  = {中文信息学报},
+  year     = {2022},
+  volume   = {36},
+  number   = {2},
+  pages    = {85--92},
+  language = {zh},
+  note     = {山西大学；方法 FMM-CAM：最大正向匹配词映射 B/M/E/S 四社区 + 社区自注意力。核验：中国知网题录 + 中文信息学报官网（jcip.cipsc.org.cn）PDF 摘要}
+}
+
+
+% ---------------------------------------------------------------------------
+% C. 检索增强 / 混合检索 / 重排 / 查询改写（5 条）
+% ---------------------------------------------------------------------------
+
+@article{bm25_2009,
+  author   = {Robertson, Stephen and Zaragoza, Hugo},
+  title    = {The Probabilistic Relevance Framework: {BM25} and Beyond},
+  journal  = {Foundations and Trends in Information Retrieval},
+  year     = {2009},
+  volume   = {3},
+  number   = {4},
+  pages    = {333--389},
+  doi      = {10.1561/1500000019},
+  url      = {https://dl.acm.org/doi/10.1561/1500000019},
+  language = {en},
+  note     = {核验：ACM DOI 页 + 作者版 PDF；§3.6 BM25F 多流加权，§5 参数优化（RLS）}
+}
+
+@inproceedings{rrf_2009,
+  author    = {Cormack, Gordon V. and Clarke, Charles L. A. and B{\"u}ttcher, Stefan},
+  title     = {Reciprocal Rank Fusion Outperforms {Condorcet} and Individual Rank Learning Methods},
+  booktitle = {Proceedings of the 32nd International ACM SIGIR Conference on Research and Development in Information Retrieval (SIGIR '09)},
+  address   = {New York},
+  publisher = {ACM},
+  year      = {2009},
+  pages     = {158--159},
+  doi       = {10.1145/1571941.1572114},
+  url       = {https://cormack.uwaterloo.ca/cormacksigir09-rrf.pdf},
+  language  = {en},
+  note      = {k=60；核验：作者主页 PDF + ACM DOI 页}
+}
+
+@misc{bgem3_2024,
+  author       = {Chen, Jianlv and Xiao, Shitao and Zhang, Peitian and Luo, Kun and Lian, Defu and Liu, Zheng},
+  title        = {{BGE M3-Embedding}: Multi-Linguality, Multi-Functionality, Multi-Granularity Text Embeddings Through Self-Knowledge Distillation},
+  howpublished = {arXiv preprint arXiv:2402.03216},
+  year         = {2024},
+  url          = {https://arxiv.org/abs/2402.03216},
+  language     = {en},
+  note         = {稠密 + 稀疏词权重 + 多向量三合一；核验：arXiv abs 页}
+}
+
+@inproceedings{legalsearchlm_2025,
+  author    = {Kim, Chaeeun and Lee, Jinu and Hwang, Wonseok},
+  title     = {{LegalSearchLM}: Rethinking Legal Case Retrieval as Legal Elements Generation},
+  booktitle = {Proceedings of the 2025 Conference on Empirical Methods in Natural Language Processing (EMNLP 2025)},
+  year      = {2025},
+  url       = {https://arxiv.org/abs/2505.23832},
+  language  = {en},
+  note      = {LEGAR BENCH：411 罪名 / 约 1.2M 候选；较基线 +6\textasciitilde20\%，OOD 约 +15\%。核验：arXiv abs 页}
+}
+
+@article{tian2025cek,
+  author   = {田萱 and 谢格云 and 吴志超},
+  title    = {基于因果事件抽取驱动关键法律要素感知的林法类案检索模型构建},
+  journal  = {农业机械学报},
+  year     = {2025},
+  volume   = {56},
+  number   = {8},
+  pages    = {411--418, 446},
+  doi      = {10.6041/j.issn.1000-1298.2025.08.038},
+  language = {zh},
+  note     = {方法 CEKLE：案文切"前言/事实/分析/判决/尾文"五段，仅对事实+分析段做因果事件抽取以定位关键法律要素。核验：期刊官网摘要页（j-csam.org/article/abstract/20250838）+ 引用信息块}
+}
+
+
+% ---------------------------------------------------------------------------
+% D. 知识图谱 / 图推理 / 法规本体（5 条）
+% ---------------------------------------------------------------------------
+
+@misc{graphrag_2024,
+  author       = {Edge, Darren and Trinh, Ha and Cheng, Newman and Bradley, Joshua and Chao, Alex and Mody, Apurva and Truitt, Steven and Metropolitansky, Dasha and Ness, Robert Osazuwa and Larson, Jonathan},
+  title        = {From Local to Global: A Graph {RAG} Approach to Query-Focused Summarization},
+  howpublished = {arXiv preprint arXiv:2404.16130},
+  year         = {2024},
+  url          = {https://arxiv.org/abs/2404.16130},
+  language     = {en},
+  note         = {Leiden 社区检测 + 社区摘要 + map-reduce；核验：arXiv abs 页}
+}
+
+@inproceedings{transe_2013,
+  author    = {Bordes, Antoine and Usunier, Nicolas and Garcia-Duran, Alberto and Weston, Jason and Yakhnenko, Oksana},
+  title     = {Translating Embeddings for Modeling Multi-relational Data},
+  booktitle = {Advances in Neural Information Processing Systems 26 (NIPS 2013)},
+  address   = {Red Hook, NY},
+  publisher = {Curran Associates},
+  year      = {2013},
+  pages     = {2787--2795},
+  url       = {https://papers.nips.cc/paper/5071-translating-embeddings-for-modeling-multi-relational-data},
+  language  = {en},
+  note      = {h + r ≈ t，margin ranking + 负采样；核验：NeurIPS 官方 proceedings 页}
+}
+
+@inproceedings{rgcn_2018,
+  author    = {Schlichtkrull, Michael and Kipf, Thomas N. and Bloem, Peter and van den Berg, Rianne and Titov, Ivan and Welling, Max},
+  title     = {Modeling Relational Data with Graph Convolutional Networks},
+  booktitle = {The Semantic Web -- ESWC 2018},
+  address   = {Cham},
+  publisher = {Springer},
+  year      = {2018},
+  pages     = {593--607},
+  doi       = {10.1007/978-3-319-93417-4_38},
+  url       = {https://arxiv.org/abs/1703.06103},
+  language  = {en},
+  note      = {关系特定权重 + 基分解；FB15k-237 链接预测较基线 +29.8\%。核验：arXiv abs 页 + Springer DOI 页}
+}
+
+@article{huang2021kgcr,
+  author   = {黄治纲 and 谢新强 and 邢铁军 and 葛东 and 蔡晨秋 and 窦丽莉 and 王天翊},
+  title    = {基于司法案例知识图谱的类案推荐},
+  journal  = {南京大学学报(自然科学版)},
+  year     = {2021},
+  volume   = {57},
+  number   = {6},
+  pages    = {1053--1063},
+  doi      = {10.13232/j.cnki.jnju.2021.06.014},
+  language = {zh},
+  note     = {KGCR：文本分类 + 信息抽取建刑事 KG；余弦相似度 + 人工干预实体对齐；FU-TransH 改进负采样；欧氏距离 Top-m。核验：期刊官网题录页 + DOI 页}
+}
+
+@article{lizy2024kg,
+  author   = {李紫阳 and 张亚娟 and 黄义雄 and 王云鹤},
+  title    = {基于知识图谱的案件特征增强法律判决预测},
+  journal  = {计算机应用研究},
+  year     = {2024},
+  volume   = {41},
+  number   = {7},
+  pages    = {2153--2159},
+  doi      = {10.19734/j.issn.1001-3695.2023.11.0533},
+  language = {zh},
+  note     = {BiGRU 全文语义 + KG 向量空间类案相似度注意力 + 结构化知识融合；MRR/Hit@1 提升约 1.5\%。核验：arocmag.cn/abs/2023.11.0533 + 当期目录}
+}
+
+
+% ---------------------------------------------------------------------------
+% E. 多智能体协同 / 仲裁 / 一致性（4 条）
+% ---------------------------------------------------------------------------
+
+@misc{autogen_2023,
+  author       = {Wu, Qingyun and Bansal, Gagan and Zhang, Jieyu and Wu, Yiran and Li, Beibin and Zhu, Erkang and Jiang, Li and Zhang, Xiaoyun and Zhang, Shaokun and Liu, Jiale and Awadallah, Ahmed Hassan and White, Ryen W. and Burger, Doug and Wang, Chi},
+  title        = {{AutoGen}: Enabling Next-Gen {LLM} Applications via Multi-Agent Conversation},
+  howpublished = {arXiv preprint arXiv:2308.08155},
+  year         = {2023},
+  url          = {https://arxiv.org/abs/2308.08155},
+  language     = {en},
+  note         = {核验：arXiv abs 页}
+}
+
+@inproceedings{reflexion_2023,
+  author    = {Shinn, Noah and Cassano, Federico and Gopinath, Ashwin and Narasimhan, Karthik and Yao, Shunyu},
+  title     = {Reflexion: Language Agents with Verbal Reinforcement Learning},
+  booktitle = {Advances in Neural Information Processing Systems 36 (NeurIPS 2023)},
+  year      = {2023},
+  url       = {https://arxiv.org/abs/2303.11366},
+  language  = {en},
+  note      = {Actor / Evaluator / Self-Reflection 三模块；情节记忆窗口 Ω = 1\textasciitilde3。核验：arXiv abs 页 + NeurIPS proceedings}
+}
+
+@misc{debate_2023,
+  author       = {Du, Yilun and Li, Shuang and Torralba, Antonio and Tenenbaum, Joshua B. and Mordatch, Igor},
+  title        = {Improving Factuality and Reasoning in Language Models through Multiagent Debate},
+  howpublished = {arXiv preprint arXiv:2305.14325},
+  year         = {2023},
+  url          = {https://arxiv.org/abs/2305.14325},
+  language     = {en},
+  note         = {算术 67.0\%→81.8\%；GSM 77.0→85.0；三智能体辩论 92.5\%（另见 ICML 2024）。核验：arXiv abs 页}
+}
+
+@inproceedings{metagpt_2024,
+  author    = {Hong, Sirui and Zhuge, Mingchen and Chen, Jonathan and Zheng, Xiawu and Cheng, Yuheng and Zhang, Ceyao and Wang, Jinlin and Wang, Zili and Yau, Steven Ka Shing and Lin, Zijuan and Zhou, Liyang and Ran, Chenyu and Xiao, Lingfeng and Wu, Chenglin and Schmidhuber, J{\"u}rgen},
+  title     = {{MetaGPT}: Meta Programming for A Multi-Agent Collaborative Framework},
+  booktitle = {International Conference on Learning Representations (ICLR 2024)},
+  year      = {2024},
+  url       = {https://arxiv.org/abs/2308.00352},
+  language  = {en},
+  note      = {SOP 编码为 prompt 序列 + 结构化产物 + 发布-订阅消息池；MBPP 绝对 +5.4\%。核验：arXiv abs 页 + OpenReview}
+}
+
+
+% ---------------------------------------------------------------------------
+% F. 风险评估 / 置信度校准 / 不确定性（4 条）
+% ---------------------------------------------------------------------------
+
+@inproceedings{guo2017calib,
+  author    = {Guo, Chuan and Pleiss, Geoff and Sun, Yu and Weinberger, Kilian Q.},
+  title     = {On Calibration of Modern Neural Networks},
+  booktitle = {Proceedings of the 34th International Conference on Machine Learning (ICML 2017)},
+  series    = {Proceedings of Machine Learning Research},
+  volume    = {70},
+  year      = {2017},
+  pages     = {1321--1330},
+  url       = {https://arxiv.org/abs/1706.04599},
+  language  = {en},
+  note      = {ECE / MCE 定义；temperature scaling 单参数；核验：PMLR 页 + arXiv abs 页}
+}
+
+@incollection{platt1999,
+  author    = {Platt, John C.},
+  title     = {Probabilistic Outputs for Support Vector Machines and Comparisons to Regularized Likelihood Methods},
+  booktitle = {Advances in Large Margin Classifiers},
+  editor    = {Smola, Alexander J. and Bartlett, Peter and Sch{\"o}lkopf, Bernhard and Schuurmans, Dale},
+  address   = {Cambridge, MA},
+  publisher = {MIT Press},
+  year      = {1999},
+  pages     = {61--74},
+  url       = {https://home.cs.colorado.edu/~mozer/Teaching/syllabi/6622/papers/Platt1999.pdf},
+  language  = {en},
+  note      = {P(y=1|f)=1/(1+exp(Af+B))，正负样本数平滑 (N+ +1)/(N+ +2)；核验：作者版 PDF 可访问}
+}
+
+@misc{angelopoulos2021,
+  author       = {Angelopoulos, Anastasios N. and Bates, Stephen},
+  title        = {A Gentle Introduction to Conformal Prediction and Distribution-Free Uncertainty Quantification},
+  howpublished = {arXiv preprint arXiv:2107.07511},
+  year         = {2021},
+  url          = {https://arxiv.org/abs/2107.07511},
+  language     = {en},
+  note         = {split conformal：q̂ = ⌈(n+1)(1-α)⌉/n 经验分位数，覆盖率保证 ≥ 1-α；核验：arXiv abs 页}
+}
+
+@article{claudette2019,
+  author   = {Lippi, Marco and Pa{\l}ka, Przemys{\l}aw and Contissa, Giuseppe and Lagioia, Francesca and Micklitz, Hans-Wolfgang and Sartor, Giovanni and Torroni, Paolo},
+  title    = {{CLAUDETTE}: An Automated Detector of Potentially Unfair Clauses in Online Terms of Service},
+  journal  = {Artificial Intelligence and Law},
+  year     = {2019},
+  volume   = {27},
+  number   = {2},
+  pages    = {117--139},
+  doi      = {10.1007/s10506-019-09243-2},
+  language = {en},
+  note     = {从句级二分类 + 欧委会不公平条款清单标签体系；核验：Springer 期刊页 + LegalBench 官方仓库 bibtex}
+}
+
+
+% ---------------------------------------------------------------------------
+% G. 中文核心期刊专项（4 条）
+% ---------------------------------------------------------------------------
+
+@article{lilin2022,
+  author   = {李琳 and 段围 and 周栋 and 袁景凌},
+  title    = {基于深度语义匹配的法律条文推荐方法},
+  journal  = {软件学报},
+  year     = {2022},
+  volume   = {33},
+  number   = {7},
+  pages    = {2618--2632},
+  url      = {http://www.jos.org.cn/1000-9825/6287.htm},
+  language = {zh},
+  note     = {DeepLawRec：BERT 句级编码 + CNN 局部语义匹配 + XGBoost 回归树再选择（gamma=0.1, max\_depth=8, min\_child\_weight=3）；CAIL2018 上 Precision@1 0.638→0.913。核验：软件学报官网"引用本文"块（含全页码）}
+}
+
+@article{zhanghu2019,
+  author   = {张虎 and 王鑫 and 王冲 and others},
+  title    = {面向法律裁判文书的法条推荐方法},
+  journal  = {计算机科学},
+  year     = {2019},
+  volume   = {46},
+  number   = {9},
+  pages    = {211--215},
+  url      = {https://www.cnki.com.cn/Article/CJFDTOTAL-JSJA201909033.htm},
+  language = {zh},
+  note     = {核验：CNKI 题录页 + 《软件学报》2022, 33(7) 参考文献 [4] 交叉确认}
+}
+
+@article{yulianwei2024,
+  author   = {余连玮 and 马志柔 and 刘杰 and 叶丹},
+  title    = {基于多任务学习的民事案件判决预测方法},
+  journal  = {计算机应用与软件},
+  year     = {2024},
+  volume   = {41},
+  number   = {1},
+  pages    = {},
+  doi      = {10.3969/j.issn.1000-386x.2024.01.004},
+  url      = {https://www.shcas.net/cn/article/pdf/preview/10.3969/j.issn.1000-386x.2024.01.004.pdf},
+  language = {zh},
+  note     = {页码待核（PDF 版式页眉显示起始页 19）；多 CNN 融合 + 阈值设定；案由与法条联合预测；10 万篇民事文书}
+}
+
+@article{zhouxianhang2022,
+  author   = {周献杭 and 申妍燕},
+  title    = {基于多粒度语义交互的无监督法律裁判文书检索},
+  journal  = {集成技术},
+  year     = {2022},
+  volume   = {11},
+  number   = {2},
+  pages    = {},
+  doi      = {10.12146/j.issn.2095-3135.20210413001},
+  url      = {https://jcjs.siat.ac.cn/cn/article/pdf/preview/10.12146/j.issn.2095-3135.20210413001.pdf},
+  language = {zh},
+  note     = {页码待核（版式页眉显示起始页 57）；无监督三粒度（法律概念/词语/词组）匹配；MAP/MRR/NDCG@10 显著提升；8000 万份文书库 + 23196 份人工标注评测}
+}
+
+
+% ---------------------------------------------------------------------------
+% H. 数据集与评测基准（4 条）
+% ---------------------------------------------------------------------------
+
+@inproceedings{lawbench_2024,
+  author    = {Fei, Zhiwei and Shen, Xiaoyu and Zhu, Dawei and Zhou, Fengzhe and Han, Zhuo and Zhang, Songyang and Chen, Kai and Shen, Zongwen and Ge, Jidong},
+  title     = {{LawBench}: Benchmarking Legal Knowledge of Large Language Models},
+  booktitle = {Proceedings of the 2024 Conference on Empirical Methods in Natural Language Processing (EMNLP 2024)},
+  year      = {2024},
+  url       = {https://arxiv.org/abs/2309.16289},
+  language  = {en},
+  note      = {20 任务 / 3 认知层级（记忆-理解-应用）/ 51 个 LLM；仓库 https://github.com/open-compass/LawBench ；核验：arXiv abs 页 + ACL Anthology 2024.emnlp-main.452}
+}
+
+@inproceedings{legalbench_2023,
+  author    = {Guha, Neel and Nyarko, Julian and Ho, Daniel E. and R{\'e}, Christopher and Chilton, Adam and Narayana, Aditya and Chohlas-Wood, Alex and Peters, Austin and Waldon, Brandon and Rock, Brandon and Zambrano, Diego and Zorrilla, Dmitry and Lu, Duncan and Haddad, Faisal and Bommarito, Gregory and others},
+  title     = {{LegalBench}: A Collaboratively Built Benchmark for Measuring Legal Reasoning in Large Language Models},
+  booktitle = {Advances in Neural Information Processing Systems 36 (NeurIPS 2023) Datasets and Benchmarks Track},
+  year      = {2023},
+  url       = {https://arxiv.org/abs/2308.11462},
+  language  = {en},
+  note      = {162 任务，IRAC 分类，含 rule\_recall / rule\_application；仓库 https://github.com/HazyResearch/legalbench ；核验：arXiv abs 页}
+}
+
+@inproceedings{cuad_2021,
+  author    = {Hendrycks, Dan and Burns, Collin and Chen, Anya and Ball, Spencer},
+  title     = {{CUAD}: An Expert-Annotated {NLP} Dataset for Legal Contract Review},
+  booktitle = {Advances in Neural Information Processing Systems 35 (NeurIPS 2021) Datasets and Benchmarks Track},
+  year      = {2021},
+  url       = {https://arxiv.org/abs/2103.06268},
+  language  = {en},
+  note      = {510 份合同 / 41 类审查条款 / 13{,}000+ 专家标注，CC BY 4.0；数据 https://github.com/TheAtticusProject/cuad ；核验：arXiv abs 页 + 仓库 LICENSE}
+}
+
+@inproceedings{contractnli_2021,
+  author    = {Koreeda, Yuta and Manning, Christopher D.},
+  title     = {{ContractNLI}: A Dataset for Document-Level Natural Language Inference for Contracts},
+  booktitle = {Findings of the Association for Computational Linguistics: EMNLP 2021},
+  address   = {Stroudsburg, PA},
+  publisher = {ACL},
+  year      = {2021},
+  pages     = {1907--1919},
+  doi       = {10.18653/v1/2021.findings-emnlp.164},
+  url       = {https://arxiv.org/abs/2110.01799},
+  language  = {en},
+  note      = {17 条假设；entail / contradict / not mentioned 三态；CC BY 4.0；数据 https://stanfordnlp.github.io/contract-nli/ ；核验：arXiv abs 页 + ACL Anthology}
+}
