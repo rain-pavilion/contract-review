@@ -1,0 +1,25 @@
+# 构建上下文排除项（Dockerfile 在 deploy/，上下文是仓库根）
+# 目的：镜像里只留"代码 + 法条库 + 六个权重 JSON"，不带 3~16 GB 预训练权重与真实合同 PDF
+zhilv_qiling_v2/models/pretrained/
+zhilv_qiling_v2/models/bert_ner/
+zhilv_qiling_v2/models/bert_entail/
+zhilv_qiling_v2/models/bge_m3/
+zhilv_qiling_v2/reports/
+data/gov_contracts/
+data/reports/
+data/reviews.sqlite
+data/generated_contracts/
+docs/
+paper_figures/
+tools/
+checks/
+scripts/
+contract_review/
+_github_upload/
+.git/
+.github/
+**/__pycache__/
+**/*.pyc
+*.docx
+*.pdf
+*.png

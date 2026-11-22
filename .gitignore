@@ -1,0 +1,93 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.parsed.json
+.streamlit/secrets.toml
+.env
+
+# 数据资产：合成合同数据集与检索索引（可由 scripts/ 再生成/重建）
+data/generated_contracts/
+data/legal_index/
+data/samr_templates/
+# 政府合同扫描件体量大，按需爬取，不入库
+data/gov_contracts/
+
+# IDE / 工具
+.codebuddy/
+*.log
+
+# �����Զ�������鵵
+*.bak
+*.py.bak
+*.superseded.docx
+
+# pretrained weights and GPU artifacts (large; fetch with tools/_dl_chunked.py)
+zhilv_qiling_v2/models/pretrained/
+zhilv_qiling_v2/models/bert_ner/
+zhilv_qiling_v2/models/bert_entail/
+zhilv_qiling_v2/models/bge_m3/
+
+# Local web dependencies, archives and browser QA artifacts
+.web-deps/
+zhilv_qiling_v2/reports/workspace.sqlite*
+tools/_workspace_browser.sqlite*
+tools/web_workspace_qa/
+tools/browser_workspace_qa/
+zhilv_qiling_v2/reports/model_calls.sqlite*
+zhilv_qiling_v2/reports/model-server.log
+zhilv_qiling_v2/reports/subject_facts.json*
+tools/phase2_browser_qa/
+tools/_phase2_browser.sqlite*
+tools/_test_model_calls.sqlite*
+
+# Local native model runtime and converted weights
+.model-runtime/
+
+zhilv_qiling_v2/models/bert_mamba_entail/
+data/annotation_workspace/
+tools/_phase2_browser_final*.sqlite*
+
+# GitHub source snapshot: local runtimes, secrets, weights and generated artifacts
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.sqlite*
+*.db
+*.pt
+*.pth
+*.bin
+*.safetensors
+*.gguf
+.venv/
+.web-deps/
+.model-runtime/
+__pycache__/
+node_modules/
+outputs/
+项目材料/
+.ppt_review*/
+_github_upload/
+tmp*/
+observed*/
+data/reports/
+data/contract_packages/
+data/annotation_samples/
+zhilv_qiling_v2/data/cache/
+zhilv_qiling_v2/data/crawl/
+zhilv_qiling_v2/data/index/
+zhilv_qiling_v2/data/ocr/
+zhilv_qiling_v2/reports/*
+!zhilv_qiling_v2/reports/experiments/
+zhilv_qiling_v2/models/*/
+tools/*/
+docs/**/*.zip
+docs/**/*.docx
+docs/**/*.pptx
+docs/**/*.pdf
+docs/验收/*待标注包*/
+docs/验收/*盲审交接包*/
+docs/figures/preview/
