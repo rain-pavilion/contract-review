@@ -1,0 +1,35 @@
+name: tests
+
+# 智律契灵 v2 的回归门：118 个单元测试（core 20 + review 16 + api/cli 15 + ocr 29 + crawl 38）
+# 依赖只装运行期必需的 CPU 包；不装 torch / transformers / langgraph。
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  unittest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: 安装依赖
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r deploy/requirements-deploy.txt
+
+      - name: 环境自检
+        run: python -m zhilv_qiling_v2.cli doctor
+
+      - name: 单元测试
+        run: python -m unittest discover -s zhilv_qiling_v2/tests_v2 -t . -v
+
+      - name: 法条库自证
+        run: python zhilv_qiling_v2/reports/experiments/demo_kb.py
