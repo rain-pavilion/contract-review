@@ -1,6 +1,6 @@
 name: tests
 
-# 智律契灵 v2 的回归门：118 个单元测试（core 20 + review 16 + api/cli 15 + ocr 29 + crawl 38）
+# 当前源码回归；未公开的模型/历史报告回放按资产可用性显式跳过。
 # 依赖只装运行期必需的 CPU 包；不装 torch / transformers / langgraph。
 on:
   push:
@@ -19,6 +19,17 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: 固定离线测试模式
+        run: |
+          echo "ZLQL_ENABLE_LLM=0" >> "$GITHUB_ENV"
+          echo "HF_HUB_OFFLINE=1" >> "$GITHUB_ENV"
+          echo "TRANSFORMERS_OFFLINE=1" >> "$GITHUB_ENV"
+          echo "CUDA_VISIBLE_DEVICES=" >> "$GITHUB_ENV"
 
       - name: 安装依赖
         run: |

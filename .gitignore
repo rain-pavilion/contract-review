@@ -16,7 +16,7 @@ data/gov_contracts/
 .codebuddy/
 *.log
 
-# ¹¤¾ß×Ô¶¯±¸·İÓë¹éµµ
+# Local backups and archives
 *.bak
 *.py.bak
 *.superseded.docx
@@ -91,3 +91,16 @@ docs/**/*.pdf
 docs/éªŒæ”¶/*å¾…æ ‡æ³¨åŒ…*/
 docs/éªŒæ”¶/*ç›²å®¡äº¤æ¥åŒ…*/
 docs/figures/preview/
+
+# Current private user-library state and local review artifacts
+data/libraries/
+.superpowers/
+.trash*/
+æœ€æ–°ç”³æŠ¥ææ–™_*/
+_scratch*
+_ppt_text_dump*
+# Source helper explicitly required by the public benchmark tests
+!tools/selected_solutions_20261118/
+tools/selected_solutions_20261118/*
+!tools/selected_solutions_20261118/lawbench_split.py
+!tools/selected_solutions_20261118/human_acceptance.py

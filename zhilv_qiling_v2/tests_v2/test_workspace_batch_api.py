@@ -14,6 +14,7 @@ from unittest.mock import patch
 from zhilv_qiling_v2 import api
 from zhilv_qiling_v2.config import Config
 from zhilv_qiling_v2.tests_v2.test_web_workspace import SAMPLE
+from zhilv_qiling_v2.tests_v2.http_fixtures import admin_session, prepare_admin
 from zhilv_qiling_v2.workspace_queue import PermanentTaskError, QueueStore
 
 
@@ -24,6 +25,7 @@ class BatchApiTest(unittest.TestCase):
         self.config = Config(store_path=str(Path(self.temp.name)/"workspace.sqlite"),
             subject_facts_path=str(Path(self.temp.name)/"facts.json"), ner_use_bert=False,
             ner_enable_model=False, use_lsa=False, entailment_backend="rules", enable_llm=False)
+        prepare_admin(self.config, self.temp.name)
         api._SERVER_CONFIG = self.config
         self.start()
 
@@ -32,6 +34,7 @@ class BatchApiTest(unittest.TestCase):
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
         self.base = f"http://127.0.0.1:{self.server.server_address[1]}"
+        self.client, self.csrf = admin_session(self.base)
 
     def stop(self):
         self.server.shutdown(); self.server.server_close(); self.thread.join(5)
@@ -43,8 +46,9 @@ class BatchApiTest(unittest.TestCase):
 
     def request(self, path, body=None, content_type="application/json"):
         data = json.dumps(body, ensure_ascii=False).encode() if isinstance(body, dict) else body
-        req = urllib.request.Request(self.base+path, data=data, headers={"Content-Type":content_type})
-        try: response=urllib.request.urlopen(req, timeout=30)
+        req = urllib.request.Request(self.base+path, data=data,
+            headers={"Content-Type":content_type, "X-CSRF-Token":self.csrf})
+        try: response=self.client.open(req, timeout=30)
         except urllib.error.HTTPError as exc: response=exc
         with response: return response.status, json.loads(response.read())
 

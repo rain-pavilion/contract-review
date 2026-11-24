@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import json
 import re
 from collections import Counter
 from typing import Any
@@ -473,6 +474,30 @@ def build_review_explanations(payload: dict[str, Any]) -> dict[str, Any]:
             "evidence_status": work.get("source_status", "unrecorded"),
             "explanation": "初审范围和执行凭证记录；覆盖完整并不证明法律问题已穷尽。",
             "next_action": "人工核对未完成的原文范围，必要时补充证据后重新审查。"}, reasons))
+    supervisor = _dict(stats.get("supervisor"))
+    if supervisor.get("manual_review_requested"):
+        decisions = [row for row in _rows(supervisor.get("decisions")) if row.get("action") == "manual"]
+        decision = decisions[-1] if decisions else {}
+        identity = str(payload.get("contract_id") or "") + str(decision.get("decision_id") or "manual")
+        items.append(_manual({
+            "item_id": "supervisor_" + hashlib.sha256(identity.encode()).hexdigest()[:24],
+            "kind": "supervisor_manual_review", "title": "主脑请求人工复核",
+            "contract_evidence": evidence(decision.get("clause_ids", [])), "article_ids": [],
+            "calls": [], "model_verdicts": [], "status": "manual_review", "status_label": "主脑待人工处理",
+            "explanation": str(decision.get("reason") or "主脑请求人工核对，本次自动流程未关闭该事项。"),
+            "next_action": "人工核对相关合同、主体材料及法律依据，并记录处理意见。",
+        }, ["human_review_requested"]))
+    for review in _rows(supervisor.get("pending_reviews")):
+        identity = str(payload.get("contract_id") or "") + json.dumps(review, sort_keys=True, ensure_ascii=False)
+        items.append(_manual({
+            "item_id": "expert_" + hashlib.sha256(identity.encode()).hexdigest()[:24],
+            "kind": "expert_review", "title": "专家模型复核未完成",
+            "contract_evidence": evidence(review.get("clause_ids", [])), "article_ids": [],
+            "calls": [], "model_verdicts": [], "status": "manual_review", "status_label": "专家复核待补核",
+            "model_id": review.get("model_id"), "attempts": review.get("attempts", 0),
+            "explanation": "已指派专家模型，但尚无完整执行凭证；未将失败或部分输出记为完成。",
+            "next_action": "检查模型服务及完整调用结果，必要时重试或由人工复核。",
+        }, ["expert_review_incomplete"]))
     counts = Counter(item["kind"] for item in items)
     from .review_task_summary import build_task_summary
     return {"version": "review-explanations-v1", "contract_id": payload.get("contract_id"),

@@ -535,12 +535,16 @@ class Retriever:
         self.config = config
         package_ids = {str(row.get("package_id") or "") for row in index.statutes}
         self.source_package_id = (next(iter(package_ids)) if len(package_ids) == 1 and "" not in package_ids else "")
+        profiles = {str(row.get("retrieval_profile") or "") for row in index.statutes}
+        self.retrieval_profile = ("published_raw_bm25_v1" if profiles == {"published_raw_bm25_v1"}
+            else "source_package_raw_bm25_v1" if self.source_package_id else "legacy_multichannel")
+        self.raw_source_profile = self.retrieval_profile != "legacy_multichannel"
         # Package statutes have source provenance but no package-trained labels,
         # fusion or LTR validation. Preserve the complete user's terms and do not
         # transfer unrelated learned ranking or inferred risk tags into this corpus.
-        self.ranker = None if self.source_package_id else (ranker or default_ranker())
-        fusion = trained_fusion() if channel_weights is None and not self.source_package_id else None
-        if self.source_package_id:
+        self.ranker = None if self.raw_source_profile else (ranker or default_ranker())
+        fusion = trained_fusion() if channel_weights is None and not self.raw_source_profile else None
+        if self.raw_source_profile:
             self.weights = {"sparse": 1.0, "dense": 0.0, "tag": 0.0}
         elif channel_weights is not None:
             self.weights = dict(channel_weights)
@@ -548,7 +552,7 @@ class Retriever:
             self.weights = {name: float(value) for name, value in fusion["weights"].items()}
         else:
             self.weights = dict(CHANNEL_WEIGHTS)
-        if self.source_package_id:
+        if self.raw_source_profile:
             self.rrf_k = config.rrf_k
         elif rrf_k is not None:
             self.rrf_k = rrf_k
@@ -633,21 +637,21 @@ class Retriever:
     ) -> RetrievalResult:
         top_k = top_k or self.config.top_k
         requested_rerank = self.config.use_rerank if use_rerank is None else use_rerank
-        use_rerank = False if self.source_package_id else requested_rerank
-        query = plan.raw if self.source_package_id else (plan.rewritten if self.config.use_query_rewrite else plan.raw)
+        use_rerank = False if self.raw_source_profile else requested_rerank
+        query = plan.raw if self.raw_source_profile else (plan.rewritten if self.config.use_query_rewrite else plan.raw)
         limit = self.config.retrieve_candidate_limit
 
         channels: dict[str, list[tuple[int, float]]] = {
             "sparse": self.index.bm25(query, limit=limit),
-            "dense": [] if self.source_package_id else self.index.dense(query, limit=limit),
-            "tag": [] if self.source_package_id else self.index.tag_channel(plan.tags, (plan.contract_types[0] if plan.contract_types else "通用"), limit=limit),
+            "dense": [] if self.raw_source_profile else self.index.dense(query, limit=limit),
+            "tag": [] if self.raw_source_profile else self.index.tag_channel(plan.tags, (plan.contract_types[0] if plan.contract_types else "通用"), limit=limit),
         }
         fused = self._fuse(channels)
         candidates = fused[:limit]
 
         scored: list[tuple[RetrievalHit, float]] = []
         feature_rows: list[tuple[int, dict[str, float]]] = []
-        feature_plan = replace(plan, rewritten=query, tags=[]) if self.source_package_id else plan
+        feature_plan = replace(plan, rewritten=query, tags=[]) if self.raw_source_profile else plan
         for doc_id, feats, rrf in candidates:
             doc = self.index.statutes[doc_id]
             feature_map = self._features(doc, feature_plan, feats, query_len=len(query))
@@ -700,7 +704,7 @@ class Retriever:
         # 真正的文本命中位次。
         expanded: list[RetrievalHit] = []
         expansion_limit = int(getattr(self.config, "tag_expansion_limit", 2) or 0)
-        if expansion_limit > 0 and hits and not self.source_package_id:
+        if expansion_limit > 0 and hits and not self.raw_source_profile:
             floor = min(hit.score for hit in hits)
             for doc in self.index.expand_by_tags(hits, limit=expansion_limit):
                 expanded.append(
@@ -721,16 +725,16 @@ class Retriever:
                 hit.rank = offset
             hits.extend(expanded)
         degraded: list[str] = []
-        if not self.index.lsa_ready and not self.source_package_id:
+        if not self.index.lsa_ready and not self.raw_source_profile:
             degraded.append("dense:disabled-by-config" if not self.config.use_lsa else "dense:unavailable")
-        if not self.index.tag_postings and not self.source_package_id:
+        if not self.index.tag_postings and not self.raw_source_profile:
             degraded.append("tag:no-tags")
-        if self.ranker is None and not self.source_package_id:
+        if self.ranker is None and not self.raw_source_profile:
             degraded.append("rerank:no-model")
         stats = {
             "query": query,
             "slots": plan.slots,
-            "tags": [] if self.source_package_id else plan.tags,
+            "tags": [] if self.raw_source_profile else plan.tags,
             "channels": {name: len(ranked) for name, ranked in channels.items()},
             "candidates": len(candidates),
             "returned": len(hits),
@@ -738,12 +742,12 @@ class Retriever:
             "degraded": degraded,
             "weights": dict(self.weights),
             "rrf_k": self.rrf_k,
-            "retrieval_profile": "source_package_raw_bm25_v1" if self.source_package_id else "legacy_multichannel",
+            "retrieval_profile": self.retrieval_profile,
             "package_id": self.source_package_id or None,
-            "query_rewrite_applied": bool(self.config.use_query_rewrite and not self.source_package_id),
+            "query_rewrite_applied": bool(self.config.use_query_rewrite and not self.raw_source_profile),
             "trained_rerank_applied": bool(use_rerank and self.ranker and self.ranker.weights),
         }
-        if self.source_package_id:
+        if self.raw_source_profile:
             stats["source_package_policy"] = {
                 "reason": "新来源法条库尚无适配的人工标签与重排验证；保留原查询，暂不迁移旧库训练排序。",
                 "ranking": "bm25_rank_with_single_channel_rrf_score",
@@ -766,7 +770,10 @@ class Retriever:
 def statute_provenance(doc: Mapping[str, Any]) -> dict[str, Any]:
     """Preserve the original file, extraction quality and locator on each hit."""
     fields = ("package_id", "source_id", "original_sha256", "text_sha256", "text_source_id",
-              "source_status_statement", "applicability_status", "extraction_quality", "location")
+              "source_status_statement", "applicability_status", "extraction_quality", "location",
+              "document_id", "version_id", "snapshot_id", "source_sha256", "validity",
+              "effective_from", "effective_to", "jurisdiction", "region", "domains",
+              "published_at", "issuing_authority", "retrieval_profile")
     return {key: doc[key] for key in fields if key in doc}
 
 

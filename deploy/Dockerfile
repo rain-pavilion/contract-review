@@ -21,6 +21,7 @@ COPY zhilv_qiling_v2/ /app/zhilv_qiling_v2/
 COPY data/法条结构化数据.jsonl /app/data/法条结构化数据.jsonl
 COPY data/qualification_kg.jsonl /app/data/qualification_kg.jsonl
 COPY samples/ /app/samples/
+COPY tools/acceptance_annotations.py tools/acceptance_common.py /app/tools/
 
 # 权重与大文件不进镜像（见 .dockerignore）：预训练模型 3~16 GB，走挂载或远程推理
 

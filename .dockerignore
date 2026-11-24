@@ -11,7 +11,9 @@ data/reviews.sqlite
 data/generated_contracts/
 docs/
 paper_figures/
-tools/
+tools/*
+!tools/acceptance_annotations.py
+!tools/acceptance_common.py
 checks/
 scripts/
 contract_review/

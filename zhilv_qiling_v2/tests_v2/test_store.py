@@ -16,6 +16,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from zhilv_qiling_v2 import bench, store
 from zhilv_qiling_v2.config import config_from_env
@@ -157,7 +158,10 @@ class BenchTest(unittest.TestCase):
     def test_latency_bench_uses_sample(self) -> None:
         if not SAMPLE.exists():
             self.skipTest("样例缺失")
-        payload = bench.bench_latency(config_from_env(), limit=2)
+        # Use the distributed sample for both warmup and the measured review;
+        # the private benchmark corpus is intentionally absent from releases.
+        with patch("zhilv_qiling_v2.pipeline.dataset_files", return_value=[SAMPLE, SAMPLE]):
+            payload = bench.bench_latency(config_from_env(), limit=2)
         self.assertGreaterEqual(payload["n"], 1)
         self.assertGreater(payload["p50_s"], 0.0)
 

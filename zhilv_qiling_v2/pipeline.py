@@ -14,7 +14,7 @@ from __future__ import annotations
 import hashlib
 import json
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Iterable, Sequence
 
@@ -26,6 +26,7 @@ from .models import Contract, ContractElements, DocumentParse, ReviewReport
 from .ner import extract_elements
 from .parsers import ParseError, parse_document, parse_path
 from .splitter import split_document
+from .review_context import build_review_context
 
 CONTRACT_TYPE_HINTS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("房屋租赁", ("房屋租赁", "租赁合同", "出租人", "承租人", "租金")),
@@ -103,10 +104,16 @@ def build_contract(
     config: Config | None = None,
 ) -> Contract:
     config = config or config_from_env()
+    document = replace(document, stats=dict(document.stats))
     elements, signals, ner_stats = extract(document, config)
-    contract_type = infer_contract_type(document)
+    detected_type = infer_contract_type(document)
+    selected_type = config.review_contract_type
+    contract_type = detected_type if selected_type == "auto" else selected_type
+    review_context = build_review_context(contract_type, config, detected_type)
     document.stats["ner"] = ner_stats
     document.stats["contract_type"] = contract_type
+    document.stats["detected_contract_type"] = detected_type
+    document.stats["review_context"] = dict(review_context)
     # Version the identity so historical filename/length IDs cannot authorize a
     # revised contract. Exact parsed content is bound without normalization.
     identity = json.dumps([document.source_name, document.full_text], ensure_ascii=False,
@@ -122,6 +129,7 @@ def build_contract(
         elements=elements,
         signals=signals,
         contract_type=contract_type,
+        review_context=review_context,
     )
 
 

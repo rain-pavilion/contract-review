@@ -196,10 +196,11 @@ class NodeOutcome:
 def llm_settings(config: Config) -> L.LLMConfig:
     """把 Config 里的端点信息翻译成客户端配置；Config 未填时回落环境变量。"""
     env = L.llm_config_from_env()
+    explicit = getattr(config, "llm_route_explicit", False)
     return L.LLMConfig(
-        endpoint=str(getattr(config, "llm_endpoint", "") or env.endpoint),
-        model=str(getattr(config, "llm_model", "") or env.model),
-        api_key=str(getattr(config, "llm_api_key", "") or env.api_key),
+        endpoint=str(getattr(config, "llm_endpoint", "") if explicit else (getattr(config, "llm_endpoint", "") or env.endpoint)),
+        model=str(getattr(config, "llm_model", "") if explicit else (getattr(config, "llm_model", "") or env.model)),
+        api_key=str(getattr(config, "llm_api_key", "") if explicit else (getattr(config, "llm_api_key", "") or env.api_key)),
         timeout=float(getattr(config, "llm_timeout", env.timeout) or env.timeout),
         # The launcher supplies the tested LegalOne-8B output budget explicitly.
         max_tokens=int(getattr(config, "llm_max_tokens", 512) or 512),
@@ -697,8 +698,11 @@ def _llm_logic(
     from .claim_grounding import assess_claim
     from .fact_slots import extract_fact_slots
     from .proposition_graph import build_proposition_graph
+    from .review_points import review_point_catalog
     import copy
 
+    review_points = [{key: point[key] for key in ("point_id", "question", "criterion", "version")}
+        for point in review_point_catalog() if point["responsible_agent"] == "logic"]
     scope = list(clauses)
     windows, plan = build_review_plan(
         scope, chunk_chars=int(getattr(config, "llm_chunk_chars", 1800)),
@@ -720,6 +724,8 @@ def _llm_logic(
     verified_by_job: dict[str, set[str]] = {}
     degraded: list[str] = []
     meta: dict[str, Any] = {**plan, "model": client_config.model,
+                            "review_point_ids": [point["point_id"] for point in review_points],
+                            "review_point_version": "review-points-v1",
                             "clauses": len(scope), "calls": [], "accepted": 0, "rejected": 0,
                             "no_issue_observations": [],
                             "defect_code_policy": {
@@ -1069,6 +1075,8 @@ def _llm_logic(
                 if not native_initial_source_selection:
                     native_schema = canonical_initial_schema
         user_input = {"contract_type": contract.contract_type,
+                      "review_context": dict(contract.review_context),
+                      "review_points": review_points,
                       **(_feedback_window_input(window) if bounded_feedback else
                          initial_request["payload"] if initial_request else window.as_dict()),
                       "verification_feedback": statute_feedback}
@@ -1106,6 +1114,7 @@ def _llm_logic(
             user_input, ensure_ascii=False)}]
         tick = time.perf_counter()
         call = {"window_id": window.window_id, "kind": window.kind,
+                "review_context_fingerprint": contract.review_context.get("context_fingerprint", ""),
                 "clause_ids": list(dict.fromkeys(s.clause_id for s in window.segments)),
                 "feedback_items": len(bounded_feedback),
                 "subject_fact_feedback_items": len(fact_feedback),
@@ -1163,7 +1172,8 @@ def _llm_logic(
             pair = L.request_json(client_config, messages, **request_options)
         except L.LLMClientError as exc:
             attach_request_receipts(call, exc)
-            call.update(status="error", reason=str(exc)[:160], seconds=round(time.perf_counter()-tick, 3))
+            error_text = str(exc).replace(client_config.api_key, "[redacted]") if client_config.api_key else str(exc)
+            call.update(status="error", reason=error_text[:160], seconds=round(time.perf_counter()-tick, 3))
             if isinstance(exc, L.LLMContextError):
                 # Tokenization is not inference: do not invent an initial
                 # response/continuation attempt or consume the generation budget.
@@ -1177,7 +1187,7 @@ def _llm_logic(
             meta["calls"].append(call)
             consecutive_errors += 1
             if not native_initial_output:
-                degraded.append(f"llm_window_error:{window.window_id}:{str(exc)[:80]}")
+                degraded.append(f"llm_window_error:{window.window_id}:{error_text[:80]}")
             if consecutive_errors >= 3:
                 degraded.append("llm_circuit_open_after_3_errors")
                 break
@@ -1743,7 +1753,8 @@ def node_judge(
         {
             "role": "user",
             "content": json.dumps(
-                {"score": score, "contract_type": getattr(contract, "contract_type", "通用"), "risks": digest},
+                {"score": score, "contract_type": getattr(contract, "contract_type", "通用"),
+                 "review_context": dict(getattr(contract, "review_context", {}) or {}), "risks": digest},
                 ensure_ascii=False,
             ),
         },
@@ -1754,7 +1765,8 @@ def node_judge(
                 "type": "array", "maxItems": 3, "items": {"type": "string", "enum": [item["risk_id"] for item in digest]}}},
                 "required": ["focus_risk_ids"], "additionalProperties": False})
     except L.LLMClientError as exc:
-        outcome.degraded.append(f"llm_error:{str(exc)[:80]}")
+        error_text = str(exc).replace(client_config.api_key, "[redacted]") if client_config.api_key else str(exc)
+        outcome.degraded.append(f"llm_error:{error_text[:80]}")
         outcome.elapsed = time.perf_counter() - started
         return outcome
     raw_ids = pair.content.get("focus_risk_ids") or []
@@ -1762,6 +1774,7 @@ def node_judge(
     valid_ids = [value for value in raw_ids if isinstance(value, str) and value in allowed_ids] if isinstance(raw_ids, list) else []
     outcome.payload["focus"] = render_focus(risks, valid_ids)
     outcome.llm = {"model": pair.model, "seconds": round(pair.elapsed, 3),
+                   "review_context_fingerprint": getattr(contract, "review_context", {}).get("context_fingerprint", ""),
                    "protocol": "risk-id-prioritization-v1", "raw_response": pair.content,
                    "accepted_risk_ids": valid_ids, "free_text_not_used_as_conclusion": True}
     outcome.elapsed = time.perf_counter() - started

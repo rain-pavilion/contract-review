@@ -32,7 +32,8 @@ class QueueTest(unittest.TestCase):
         restored.start_batch(key)
         task = restored.claim_next("one")
         self.assertEqual(task["content"], b"contract")
-        self.assertEqual(task["options"], {"engine": "multi", "llm": False})
+        self.assertEqual(task["options"], {"engine": "multi", "llm": False,
+            "contract_type": "auto", "review_position": "neutral"})
         self.assertNotIn("content", restored.get_batch(key)["items"][0])
 
     def test_claims_are_exclusive_across_connections(self):

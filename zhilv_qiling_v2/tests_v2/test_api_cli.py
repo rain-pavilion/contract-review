@@ -10,13 +10,18 @@ from __future__ import annotations
 
 import io
 import json
+import tempfile
 import threading
 import unittest
 import urllib.error
 import urllib.request
 from contextlib import redirect_stdout
+from pathlib import Path
 
 from zhilv_qiling_v2 import api, cli
+from zhilv_qiling_v2.config import Config
+from zhilv_qiling_v2.tests_v2.http_fixtures import admin_session, prepare_admin
+from zhilv_qiling_v2.version import VERSION_TAG
 
 SAMPLE_TEXT = """技术开发（委托）合同
 委托方（甲方）：星海科技产业园管理有限公司
@@ -34,27 +39,38 @@ class _Server:
     """在后台线程里起一个真实的 HTTP 服务，端口交给系统分配。"""
 
     def __init__(self) -> None:
+        self.temp = tempfile.TemporaryDirectory()
+        self.previous_config = api._SERVER_CONFIG
+        config = Config(store_path=str(Path(self.temp.name) / "archive.sqlite"),
+            ner_enable_model=False, ner_use_bert=False, enable_llm=False,
+            use_lsa=False, entailment_backend="rules")
+        prepare_admin(config, self.temp.name)
+        api._SERVER_CONFIG = config
         self.httpd = api.serve("127.0.0.1", 0)
         self.port = self.httpd.server_address[1]
         self.thread = threading.Thread(target=self.httpd.serve_forever, daemon=True)
 
     def __enter__(self) -> "_Server":
         self.thread.start()
+        self.client, self.csrf = admin_session(f"http://127.0.0.1:{self.port}")
         return self
 
     def __exit__(self, *_exc) -> None:
         self.httpd.shutdown()
         self.httpd.server_close()
+        self.thread.join(5)
+        api._SERVER_CONFIG = self.previous_config
+        self.temp.cleanup()
 
     def request(self, path: str, payload: dict | None = None) -> tuple[int, dict]:
         data = json.dumps(payload).encode("utf-8") if payload is not None else None
         request = urllib.request.Request(
             f"http://127.0.0.1:{self.port}{path}",
             data=data,
-            headers={"Content-Type": "application/json"},
+            headers={"Content-Type": "application/json", "X-CSRF-Token": self.csrf},
         )
         try:
-            with urllib.request.urlopen(request, timeout=180) as response:
+            with self.client.open(request, timeout=180) as response:
                 return response.status, json.loads(response.read().decode("utf-8"))
         except urllib.error.HTTPError as error:
             return error.code, json.loads(error.read().decode("utf-8"))
@@ -69,12 +85,14 @@ class ApiTest(unittest.TestCase):
     def tearDownClass(cls) -> None:
         cls.server.__exit__()
 
-    def test_health_exposes_capabilities(self):
+    def test_health_exposes_sanitized_public_status(self):
         status, payload = self.server.request("/api/health")
         self.assertEqual(status, 200)
-        self.assertIn("capabilities", payload)
-        self.assertIn("models", payload)
-        self.assertEqual(payload["version"], "2.0.0")
+        self.assertEqual(payload["status"], "ok")
+        self.assertEqual(payload["tag"], VERSION_TAG)
+        self.assertTrue(payload["authentication_required"])
+        self.assertNotIn("models", payload)
+        self.assertNotIn("capabilities", payload)
 
     def test_models_lists_five_components(self):
         status, payload = self.server.request("/api/models")
@@ -103,11 +121,13 @@ class ApiTest(unittest.TestCase):
         self.assertTrue(payload["hits"][0]["article"].startswith("第"))
 
     def test_batch_returns_summary(self):
-        status, payload = self.server.request("/api/batch", {"limit": 2})
-        self.assertEqual(status, 200)
+        status, payload = self.server.request("/api/batch", {
+            "limit": 2, "paths": ["samples/tech-development-contract.txt"]})
+        self.assertEqual(status, 200, payload)
         summary = payload["summary"]
         self.assertIn("count", summary)
         self.assertIn("code_histogram", summary)
+        self.assertEqual(summary["count"], 1)
         self.assertLessEqual(summary["count"], 2)
 
     def test_unknown_route_404(self):
@@ -120,6 +140,11 @@ class ApiTest(unittest.TestCase):
         ) as response:
             body = response.read().decode("utf-8")
         self.assertIn("智律契灵", body)
+        self.assertIn("/api/library", body)
+        with self.server.client.open(
+            f"http://127.0.0.1:{self.server.port}/workspace", timeout=30
+        ) as response:
+            body = response.read().decode("utf-8")
         self.assertIn("api/review", body)
 
 

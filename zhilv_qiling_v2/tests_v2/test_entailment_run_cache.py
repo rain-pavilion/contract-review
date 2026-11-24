@@ -14,6 +14,7 @@ from unittest.mock import Mock, patch
 
 from zhilv_qiling_v2 import entailment as E, model_audit as A
 from zhilv_qiling_v2.engine import ReviewEngine
+from zhilv_qiling_v2.models import Contract, DocumentParse, ReviewReport
 from zhilv_qiling_v2.tests_v2.test_entailment_windows import fake_predictor, prediction
 
 
@@ -193,14 +194,16 @@ class EntailmentRunCacheTests(unittest.TestCase):
         def review(contract):
             self.judge()
             self.judge()
-            if contract == "fail":
+            if contract.contract_id == "fail":
                 raise RuntimeError("review failed")
-            return SimpleNamespace(stats={})
+            return ReviewReport(contract.contract_id, contract.document.source_name)
+        def fixture(contract_id):
+            return Contract(contract_id, DocumentParse("cache-fixture.txt", "txt", CLAUSE))
         with patch.object(engine, "_run_review", side_effect=review):
             with self.assertRaisesRegex(RuntimeError, "review failed"):
-                engine.run("fail")
-            first = engine.run("contract-one")
-            second = engine.run("contract-two")
+                engine.run(fixture("fail"))
+            first = engine.run(fixture("contract-one"))
+            second = engine.run(fixture("contract-two"))
         self.assertEqual(self.predictor.predict.call_count, 3)
         self.assertEqual(first.stats["entailment_cache"]["cache_reuses"], 1)
         self.assertEqual(second.stats["entailment_cache"]["prediction_calls"], 1)

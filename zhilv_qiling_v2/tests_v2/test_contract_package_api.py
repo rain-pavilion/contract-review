@@ -12,6 +12,7 @@ from zhilv_qiling_v2 import api
 from zhilv_qiling_v2.config import Config
 from zhilv_qiling_v2.contract_packages import import_contract_package, package_evidence_summary
 from zhilv_qiling_v2.tests_v2.test_contract_packages import ContractPackageTests
+from zhilv_qiling_v2.tests_v2.http_fixtures import admin_session, prepare_admin
 from zhilv_qiling_v2.workspace_queue import QueueStore, PermanentTaskError
 
 
@@ -27,11 +28,13 @@ class ContractPackageApiTests(unittest.TestCase):
             ner_enable_model=False, ner_use_bert=False, use_lsa=False,
             enable_multi_agent=True, enable_llm=False, entailment_backend="rules")
         self.old = api._SERVER_CONFIG
+        prepare_admin(self.config, self.fixture.temp.name)
         api._SERVER_CONFIG = self.config
         self.server = api.serve("127.0.0.1", 0)
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
         self.base = "http://127.0.0.1:" + str(self.server.server_address[1])
+        self.client, self.csrf = admin_session(self.base)
 
     def tearDown(self):
         self.server.shutdown()
@@ -43,9 +46,9 @@ class ContractPackageApiTests(unittest.TestCase):
     def request(self, path, body=None, raw=False):
         data = json.dumps(body, ensure_ascii=False).encode() if body is not None else None
         request = urllib.request.Request(self.base + path, data=data,
-            headers={"Content-Type": "application/json"})
+            headers={"Content-Type": "application/json", "X-CSRF-Token": self.csrf})
         try:
-            response = urllib.request.urlopen(request, timeout=30)
+            response = self.client.open(request, timeout=30)
         except urllib.error.HTTPError as exc:
             response = exc
         with response:

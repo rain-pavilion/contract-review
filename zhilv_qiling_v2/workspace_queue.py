@@ -66,9 +66,12 @@ class QueueStore:
         return db
 
     def create_batch(self, options: dict | None = None) -> dict:
-        options = options or {}
+        from .review_context import normalize_review_options
+        options = {} if options is None else options
+        review_options = normalize_review_options(options)
         safe = {"engine": "single" if options.get("engine") == "single" else "multi",
-                "llm": str(options.get("llm", "0")).lower() in ("1", "true", "on")}
+                "llm": str(options.get("llm", "0")).lower() in ("1", "true", "on"),
+                **review_options}
         key, now = uuid.uuid4().hex, time.time()
         with closing(self.connect()) as db, db:
             db.execute("INSERT INTO workspace_batches VALUES (?,?,?,?,?)",

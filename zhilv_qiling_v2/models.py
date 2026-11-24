@@ -304,6 +304,7 @@ class Contract(_Record):
     schema_version: str = "2.0"
     contract_type: str = "通用"
     """合同类型（房屋租赁/委托/中介/保管/商品房预售…），由标题与角色词推断。"""
+    review_context: dict[str, Any] = field(default_factory=dict)
 
     def clause_map(self) -> dict[str, Clause]:
         return self.document.clause_map()
@@ -687,7 +688,17 @@ class ReviewReport(_Record):
                 f"耗时 {self.stats.get('elapsed_seconds', 0):.2f}s · "
                 f"LLM {'可用' if self.stats.get('llm_available') else '不可用（已降级）'}"
             )
-        lines += ["", "## 风险明细", ""]
+        from .review_assessment import review_framework_markdown
+        framework = self.stats.get("review_framework")
+        if isinstance(framework, dict):
+            lines += ["", *review_framework_markdown(framework), ""]
+        else:
+            lines += ["", "未保存三层审查记录。", ""]
+        context_review = self.stats.get("contract_context_review")
+        if isinstance(context_review, dict):
+            from .context_review_report import context_review_markdown
+            lines += ["", *context_review_markdown(context_review), ""]
+        lines += ["", "## 评估结果关联风险明细", ""]
         if not self.risks:
             lines.append("本次未生成具体风险候选；不代表审查通过。")
         for index, risk in enumerate(self.sorted_risks(), start=1):

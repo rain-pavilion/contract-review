@@ -63,8 +63,13 @@ def _print_report(report, *, verbose: bool = False) -> None:
     print(f"- 耗时：{report.stats.get('elapsed_seconds')} s"
           f"（条款 {report.stats.get('clauses')} 条，候选 {report.stats.get('candidates')}）")
     print()
+    from .review_assessment import review_framework_markdown
+    framework = report.stats.get("review_framework")
+    print("\n".join(review_framework_markdown(framework)) if isinstance(framework, dict)
+          else "未保存三层审查记录。")
+    print()
     if not report.risks:
-        print("未发现实质风险。")
+        print("本次未生成具体风险候选；不代表审查通过。")
         return
     print("| # | 风险码 | 分类 | 等级 | 置信 | 说明 | 法条 |")
     print("|---|--------|------|------|------|------|------|")
@@ -107,6 +112,9 @@ def cmd_review(args: argparse.Namespace) -> int:
     from .pipeline import prepare, review_path
 
     config = config_from_env()
+    from .review_context import apply_review_options
+    config = apply_review_options(config, {"contract_type": getattr(args, "contract_type", "auto"),
+        "review_position": getattr(args, "review_position", "neutral")})
     if args.no_rerank:
         config.use_rerank = False
     if args.no_dp:
@@ -157,6 +165,9 @@ def cmd_batch(args: argparse.Namespace) -> int:
     from .pipeline import batch_review, dataset_files
 
     config = config_from_env()
+    from .review_context import apply_review_options
+    config = apply_review_options(config, {"contract_type": getattr(args, "contract_type", "auto"),
+        "review_position": getattr(args, "review_position", "neutral")})
     root = Path(args.root) if args.root else None
     paths = dataset_files(root) if root else dataset_files()
     if not paths:
@@ -569,6 +580,13 @@ def build_parser() -> argparse.ArgumentParser:
     explain.add_argument("--no-dp", action="store_true")
     explain.add_argument("--store", action="store_true", help="结果入库（data/reviews.sqlite）")
     explain.set_defaults(func=cmd_explain)
+
+    from .review_context import CONTRACT_TYPES, POSITION_LABELS
+    for review_parser in (review, batch, explain):
+        review_parser.add_argument("--contract-type", choices=("auto", *CONTRACT_TYPES), default="auto",
+            help="本次合同类型；auto按文本推断，手动选择保留原推断记录")
+        review_parser.add_argument("--review-position", choices=tuple(POSITION_LABELS), default="neutral",
+            help="本次审查视角：neutral中立、party_a甲方、party_b乙方")
 
     retrieve = sub.add_parser("retrieve", help="法条检索")
     retrieve.add_argument("--text", default="")

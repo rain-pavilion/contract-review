@@ -1,7 +1,7 @@
 """主脑调度与分级复核的测试。
 
 守住三件事：
-1. 主脑开工前确实按节点派活（task.assign 落到了四个功能节点），而不是"假装有调度器"；
+1. 主脑开工前确实向五个业务节点派活，包括最终综合评估；
 2. 没配强模型端点时，主脑不派复核（否则每条合同都在等一个不存在的服务）；
 3. 插件位可用：`register_agent` 之后新节点进拓扑、能被调度、投递不被拒。
 """
@@ -30,10 +30,10 @@ class OrchestratorTest(unittest.TestCase):
         config = Config()
         cls.out = R.run_multi_agent(_contract(config), config, strict_topology=True)
 
-    def test_plan_dispatched_to_four_nodes(self):
+    def test_plan_dispatched_to_all_five_business_nodes(self):
         assigns = [m for m in self.out.bus.log if m.kind == "task.assign"]
         receivers = {m.receiver for m in assigns}
-        self.assertEqual(receivers, {"ner", "logic", "subject", "statute"})
+        self.assertEqual(receivers, {"ner", "logic", "subject", "statute", "judge"})
         for m in assigns:
             self.assertIn("tier", m.payload)
             self.assertEqual(m.sender, "orchestrator")

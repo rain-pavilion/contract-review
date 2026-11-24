@@ -20,7 +20,7 @@ import hashlib
 import json
 import time
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Sequence
 
 from . import agents as A
@@ -77,9 +77,11 @@ class ReviewState:
 class ReviewEngine:
     """调度器。`retriever` 为 None 时自动按 `data/法条结构化数据.jsonl` 建索引。"""
 
-    def __init__(self, config: Config | None = None, retriever: Any = None) -> None:
+    def __init__(self, config: Config | None = None, retriever: Any = None, *,
+                 completeness_check=None) -> None:
         self.config = config or Config()
         self._retriever = retriever
+        self._completeness_check = completeness_check
         self.trace: list[TraceEvent] = []
         self._seq = 0
 
@@ -116,10 +118,39 @@ class ReviewEngine:
     # -- 主流程 -------------------------------------------------------------
     def run(self, contract: Contract) -> ReviewReport:
         from .entailment import review_prediction_cache
+        from .review_context import build_review_context
+        from .review_point_checks import evaluate_review_points
+        from .review_assessment import build_review_framework
+        from .context_review import evaluate_contract_context
+
+        detected_type = (contract.review_context.get("detected_contract_type")
+                         or contract.document.stats.get("detected_contract_type")
+                         or contract.contract_type)
+        selected_type = self.config.review_contract_type
+        effective_type = detected_type if selected_type == "auto" else selected_type
+        context = build_review_context(effective_type, self.config, detected_type)
+        # Request-specific perspective must not contaminate a Contract reused by
+        # another run. Content identity and evidence locations stay unchanged.
+        document = replace(contract.document, stats={**contract.document.stats,
+            "contract_type": effective_type, "detected_contract_type": detected_type,
+            "review_context": dict(context)})
+        contract = replace(contract, document=document, contract_type=effective_type,
+                           review_context=context, graph_stats=dict(contract.graph_stats))
 
         with review_prediction_cache() as cache:
             report = self._run_review(contract)
             report.stats["entailment_cache"] = cache.summary()
+            report.stats["review_context"] = dict(contract.review_context)
+            context_started = time.perf_counter()
+            context_review = evaluate_contract_context(contract, self.config,
+                completeness_check=self._completeness_check)
+            report.stats["contract_context_review"] = context_review
+            report.stats["context_review_elapsed_ms"] = round((time.perf_counter() - context_started) * 1000, 3)
+            report.stats["review_point_checks"] = [
+                *evaluate_review_points(contract, self.config), *context_review["checks"]]
+            payload = {**report.to_dict(), "document": contract.document.to_dict(),
+                       "review_context": dict(contract.review_context)}
+            report.stats["review_framework"] = build_review_framework(payload)
             return report
 
     def _run_review(self, contract: Contract) -> ReviewReport:
@@ -188,8 +219,14 @@ class ReviewEngine:
             t0 = time.time()
             subject = S.check_subjects(contract, config)
             subject_hint = subject.query_hint()
-            if subject_hint.get("needs_government_rules") and contract.contract_type == "通用":
+            if (subject_hint.get("needs_government_rules") and contract.contract_type == "通用"
+                    and contract.review_context.get("contract_type_source") != "user"):
                 contract.contract_type = "政府采购"
+                from .review_context import build_review_context
+                contract.review_context = build_review_context("政府采购", config,
+                    contract.review_context.get("detected_contract_type", "通用"))
+                contract.document.stats["contract_type"] = contract.contract_type
+                contract.document.stats["review_context"] = dict(contract.review_context)
             state = state.with_candidates(subject.candidates)
             state.degraded.extend(subject.degraded)
             self._trace("subject_check", elapsed=time.time() - t0,
@@ -334,7 +371,7 @@ class ReviewEngine:
     # -- 多智能体路径 -------------------------------------------------------
 
     def _run_multi_agent(self, contract: Contract, started: float) -> ReviewReport:
-        """六个 Agent 走消息总线跑一遍，把结果装配成同一套 ReviewReport。
+        """主脑第一的六核心节点通过消息总线执行并装配 ReviewReport。
 
         与主链路的差别只在"怎么调度"：这里是图调度 + 消息投递（拓扑外拒收），
         风险、引用、评分、复核队列的产物结构完全一致，所以 API/Web/CLI 不用改。
@@ -384,8 +421,12 @@ class ReviewEngine:
             "logic_llm": run.diagnostics.get("logic_llm", {}),
             "statute_checks": run.diagnostics.get("statute_checks", []),
             "cross_validation": run.diagnostics.get("cross_validation", {}),
+            "supervisor": run.diagnostics.get("supervisor", {}),
             "multi_agent": {
                 "enabled": True,
+                "core_nodes": [dict(node) for node in MAR.CORE_NODES],
+                "core_stages": [list(stage) for stage in MAR.CORE_STAGES],
+                "execution_mode": "sequential",
                 "order": run.order,
                 "topology": {k: list(v) for k, v in MAR.TOPOLOGY.items()},
                 "bus": run.bus.stats() if run.bus else {},
@@ -395,6 +436,7 @@ class ReviewEngine:
             },
             "nodes": {
                 "order": list(N.NODE_ORDER),
+                "core_order": [node["id"] for node in MAR.CORE_NODES],
                 "subject_check": bool(getattr(self.config, "enable_subject_check", True)),
                 "entailment": bool(getattr(self.config, "enable_entailment", True)),
                 "llm": bool(getattr(self.config, "enable_llm", False)),

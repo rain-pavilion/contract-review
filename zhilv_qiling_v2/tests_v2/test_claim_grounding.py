@@ -96,6 +96,8 @@ class ClaimGroundingTests(unittest.TestCase):
     def test_prior_actual_eight_findings_remain_unconfirmed_offline(self):
         root = Path(__file__).resolve().parents[2]
         directory = root / "tools/acceptance_results/initial_source_selection_real_20261118_v2"
+        if not all((directory / name).is_file() for name in ("report.json", "prepared.json")):
+            self.skipTest("Historical local model observations are not distributed in this checkout")
         report = json.loads((directory / "report.json").read_text(encoding="utf-8-sig"))
         prepared = json.loads((directory / "prepared.json").read_text(encoding="utf-8-sig"))
         # These are historical model observations, expressly not human legal gold.

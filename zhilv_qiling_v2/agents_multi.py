@@ -1,4 +1,4 @@
-"""多智能体层：把五个功能节点做成真正独立的 Agent，带消息总线与调度器。
+"""六核心节点：主脑调度 + 五个业务 Agent，带消息总线与调度器。
 
 为什么需要这一层（不是包一层皮）：
 申报书的立论是 Graph-of-Agents——节点之间通过"边"传递结构化消息，每个节点把子任务
@@ -40,25 +40,39 @@ from .models import Contract, Evidence, RiskCandidate
 # ---------------------------------------------------------------- 消息与拓扑
 
 # GoA 的"图"：谁能给谁发消息。只有这里列出的边才允许投递——
-# 这是与"顺序调用"的本质区别：⑤拿不到②的原始条款，只能拿②发出的"缺陷报告"消息。
+# 通信许可与执行依赖分开：同层职责分支各自接收主脑任务，编号不表示串行前置。
 #
 # 主脑（orchestrator）在入口之后、各节点之前：它决定这一份合同把哪些子任务派给谁、
 # 用哪个档位的执行体（cheap 规则/1.7B，strong 8B）。logic 跑完会把"高风险条款"
 # 回报给主脑（回边），主脑据此决定要不要再派一次强模型复核（reviewer）。
 TOPOLOGY: dict[str, tuple[str, ...]] = {
     "intake": ("orchestrator",),                            # 入口只把解析结果交给主脑
-    "orchestrator": ("ner", "logic", "subject", "statute", "reviewer"),  # 主脑派活
-    "ner": ("logic", "subject", "statute", "judge"),        # 要素经边同时送下游四节点
+    "orchestrator": ("ner", "logic", "subject", "statute", "reviewer", "judge"),
+    "ner": ("subject", "statute", "judge"),                 # 结构化要素发往下游；逻辑分支独立读合同
     "logic": ("subject", "statute", "judge", "orchestrator"),  # 回报高风险 → 主脑再派活
-    "subject": ("logic", "statute", "judge"),
-    "statute": ("logic", "subject", "judge"),                          # 回边：冲突结果回灌②
-    "reviewer": ("judge",),                                 # 强模型复核只喂给终审
+    "subject": ("logic", "statute", "judge", "orchestrator"),
+    "statute": ("logic", "subject", "judge", "orchestrator"),
+    "reviewer": ("judge", "orchestrator"),
     "judge": (),
 }
 
+CORE_NODES: tuple[dict[str, Any], ...] = (
+    {"id": "orchestrator", "number": 1, "label": "主脑规划与调度"},
+    {"id": "ner", "number": 2, "label": "要素抽取"},
+    {"id": "logic", "number": 3, "label": "逻辑审查"},
+    {"id": "subject", "number": 4, "label": "主体审查"},
+    {"id": "statute", "number": 5, "label": "法条匹配"},
+    {"id": "judge", "number": 6, "label": "综合评估"},
+)
+
+# 职责分层，不是并发执行承诺；②③是同层分析分支，当前执行器按资源顺序调度。
+CORE_STAGES: tuple[tuple[str, ...], ...] = (
+    ("orchestrator",), ("ner", "logic"), ("subject",), ("statute",), ("judge",),
+)
+
 AGENT_SPECS: dict[str, dict[str, str]] = {
     "intake": {"role": "预处理", "executor": "layout+splitter+ner", "model": "bert-crf"},
-    "orchestrator": {"role": "主脑调度", "executor": "planner + router", "model": "router"},
+    "orchestrator": {"role": "主脑规划与调度", "executor": "validated planner + model router", "model": "router"},
     "ner": {"role": "要素抽取", "executor": "bert-crf + rules", "model": "bert-base-chinese"},
     "logic": {"role": "逻辑错误检测", "executor": "rules + detectors + llm", "model": "legalone"},
     "subject": {"role": "主体资格审查", "executor": "knowledge graph + bm25", "model": "qualification-kg"},
@@ -227,7 +241,7 @@ class Agent:
         inbox = ctx.bus.inbox(self.name)
         try:
             out = self.handle(ctx) or {}
-            status = "ok"
+            status = out.get("status", "ok")
         except Exception as exc:  # 单个 Agent 失败不拖垮编排
             out = {"error": f"{type(exc).__name__}: {exc}"}
             status = "error"
@@ -238,7 +252,7 @@ class Agent:
                 "agent": self.name,
                 "role": self.role,
                 "executor": self.executor,
-                "model": self.model,
+                "model": out.get("model", self.model),
                 "status": status,
                 "round": int(ctx.shared.get("round", 1)),
                 "seconds": round(elapsed, 3),

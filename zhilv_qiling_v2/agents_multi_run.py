@@ -1,4 +1,4 @@
-"""多智能体层（下）：六个 Agent 的具体实现与调度器。
+"""六核心节点的具体执行：第一节点主脑 + 五个业务节点及辅助 Agent。
 
 上半部分（`agents_multi.py`）给了 Message / MessageBus / Agent / AgentContext 这套骨架，
 这里把五个功能节点包成有身份的 Agent，并加一个真正的调度器——它按拓扑发消息、
@@ -16,7 +16,7 @@ import json
 import copy
 import hashlib
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Callable, Sequence
 
 from . import agents as A
@@ -24,6 +24,8 @@ from . import nodes as N
 from . import text as T
 from .agents_multi import (
     AGENT_SPECS,
+    CORE_NODES,
+    CORE_STAGES,
     Agent,
     AgentContext,
     AgentTrace,
@@ -39,6 +41,7 @@ from .models import Contract, Citation, FinalRisk, RiskCandidate, Evidence, Span
 from .review_work_items import ReviewWorkLedger, initial_work_items, feedback_work_items, fingerprint as work_fingerprint
 from .feedback_dependencies import IncrementalDispatch, dependency_graph
 from .feedback_cycle import FeedbackCycle
+from .supervisor import Supervisor
 
 # 每个 Agent 可以绑不同模型：申报书说"派发给专门的大模型或工具"，
 # 这里让路由是声明式的——改这张表就能换模型，不用改调用代码。
@@ -53,16 +56,25 @@ MODEL_ROUTES: dict[str, dict[str, str]] = {
 }
 
 
-def _cfg_for(agent: str, config: Config) -> Config:
+def _cfg_for(agent: str, config: Config, ctx: AgentContext | None = None) -> Config:
     """按路由给某个 Agent 生成本地配置副本（模型端点、温度、预算可各自不同）。"""
-    clone = Config(**{**config.__dict__}) if hasattr(config, "__dict__") else config
+    clone = replace(config)
     route = MODEL_ROUTES.get(agent, {})
     if route.get("kind") in ("llm", "hybrid"):
+        chosen = ctx.shared.get("model_assignments", {}).get(agent) if ctx is not None else None
+        if chosen:
+            clone = _supervisor(ctx).config_for(agent, chosen)
         clone.enable_llm = bool(getattr(config, "enable_llm", False))
     else:
         # 非 LLM 节点的 Agent 不去调大模型，避免"每个节点都在等模型"
         clone.enable_llm = False
     return clone
+
+
+def _supervisor(ctx: AgentContext) -> Supervisor:
+    if "supervisor" not in ctx.shared:
+        ctx.shared["supervisor"] = Supervisor(ctx.config)
+    return ctx.shared["supervisor"]
 
 
 # ---------------------------------------------------------------- 各 Agent 的 handle
@@ -86,80 +98,62 @@ def _handle_intake(ctx: AgentContext) -> dict[str, Any]:
 
 
 def _handle_orchestrator(ctx: AgentContext) -> dict[str, Any]:
-    """主脑：第一轮派活（分档位），第二轮按 logic 回报的高风险条款派强模型复核。
-
-    这是申报书里"各节点将子任务派发给专门的大模型或工具"的落点——
-    派谁、用什么档位，由这里按合同特征决定，而不是写死在代码里。
-    """
-    config = ctx.config
+    """第一核心节点：校验模型计划，按已登记路由派活并保留决策来源。"""
     clauses = list(ctx.shared.get("clauses") or [])
-    notes: list[str] = []
-
-    # —— 第二轮：logic 已回报缺陷，挑选需要强模型复核的条款 ——
     defects_msgs = ctx.bus.inbox("orchestrator", kinds=["defects.detected"])
-    if defects_msgs:
-        top_k = max(1, int(getattr(config, "llm_review_top_k", 3) or 3))
-        severity_rank = {"high": 3, "medium": 2, "low": 1}
-        scored: list[tuple[float, str]] = []
-        for msg in defects_msgs:
-            for item in (msg.payload.get("defects") or []):
-                rank = severity_rank.get(str(item.get("severity", "")), 1)
-                score = rank * 100 + float(item.get("confidence") or 0)
-                for cid in (item.get("clause_ids") or []):
-                    scored.append((score, str(cid)))
-        scored.sort(reverse=True)
-        picked: list[str] = []
-        for _score, cid in scored:
-            if cid and cid not in picked:
-                picked.append(cid)
-            if len(picked) >= top_k:
-                break
-
-        strong = (getattr(config, "llm_strong_endpoint", "") or "").strip()
-        if not strong:
-            notes.append(f"未配置强模型端点，跳过 {len(picked)} 条复核")
-            return {"notes": notes}
-        if not picked:
-            notes.append("无高风险条款，无需强模型复核")
-            return {"notes": notes}
-
-        by_id = {c.clause_id: c for c in clauses}
-        chosen = [by_id[cid] for cid in picked if cid in by_id]
-        if not chosen:
-            notes.append("高风险条款不在切分结果内，跳过复核")
-            return {"notes": notes}
-        ctx.emit(
-            "orchestrator",
-            "reviewer",
-            "review.assign",
-            {
-                "clause_ids": [c.clause_id for c in chosen],
-                "endpoint": strong,
-                "model": getattr(config, "llm_strong_model", "") or "legalone-8b",
-                "reason": f"按严重度+置信取前 {len(chosen)} 条",
-            },
-        )
-        notes.append(f"派发 {len(chosen)} 条高风险条款给强模型复核")
-        return {"notes": notes}
-
-    # —— 第一轮：按合同规模决定各节点的档位 ——
-    chars = len(ctx.contract.document.full_text or "")
-    plan = {
-        "ner": {"tier": "local", "model": "bert-base-chinese"},
-        "logic": {
-            "tier": "llm" if getattr(config, "enable_llm", False) else "rules",
-            "model": getattr(config, "llm_model", "") or "rules",
-        },
-        "subject": {"tier": "local", "model": "qualification-kg"},
-        "statute": {"tier": "local", "model": "bert-dual-tower"},
+    initialized = bool(ctx.shared.get("supervisor_initialized"))
+    stage = ctx.shared.pop("supervisor_stage", "review" if initialized else "initial")
+    context = {
+        "contract_type": ctx.contract.contract_type,
+        "review_context": dict(ctx.contract.review_context),
+        "chars": len(ctx.contract.document.full_text or ""),
+        "clause_ids": [c.clause_id for c in clauses],
+        "summary": (ctx.contract.document.full_text or "")[:3000],
+        "defects": list(defects_msgs[-1].payload.get("defects") or [])[:30] if defects_msgs else [],
+        "round": int(ctx.shared.get("round", 1)),
+        "errors": [{"agent": s["agent"], "status": s["status"]} for s in ctx.steps if s["status"] == "error"][-8:],
     }
-    focus = "长合同" if chars > 8000 else ("中合同" if chars > 3000 else "短合同")
-    for peer in ("ner", "logic", "subject", "statute"):
-        ctx.emit("orchestrator", peer, "task.assign", {"node": peer, **plan.get(peer, {})})
-    ctx.shared["plan"] = plan
-    notes.append(f"{focus}（{chars} 字）｜{len(clauses)} 条款，{len(plan)} 个节点已派活")
-    notes.append("档位：" + "，".join(f"{k}={v['tier']}" for k, v in plan.items()))
-    return {"notes": notes}
+    if stage == "feedback":
+        pending = _feedback_pending(ctx)
+        context.update(pending=pending["pending"], feedback_pending=pending["pending"],
+                       pending_feedback_item_ids=pending["item_ids"],
+                       pending_subject_request_ids=pending["pending_subject_request_ids"])
+    decision = _supervisor(ctx).decide(stage, context)
+    ctx.shared["supervisor_initialized"] = True
+    assignments = ctx.shared.setdefault("model_assignments", {})
+    for item in decision["assignments"]:
+        assignments[item["agent"]] = item["model_id"]
+    ctx.shared["supervisor_last_decision"] = decision
+    if decision["action"] == "manual":
+        ctx.shared["supervisor_manual"] = True
+    if stage == "initial":
+        plan = {}
+        for peer in ("ner", "logic", "subject", "statute", "judge"):
+            choice = assignments.get(peer)
+            plan[peer] = {"model_id": choice or MODEL_ROUTES[peer]["model"],
+                          "tier": "llm" if peer in ("logic", "judge") and ctx.config.enable_llm else "local",
+                          "reason": decision["reason"], "source": decision["source"]}
+            ctx.emit("orchestrator", peer, "task.assign", {"node": peer, **plan[peer]})
+        ctx.shared["plan"] = plan
+    else:
+        # A replacement route is an executable update, not merely a model-name label.
+        for item in decision["assignments"]:
+            if item["agent"] in ("logic", "judge"):
+                ctx.emit("orchestrator", item["agent"], "task.assign", dict(item, source=decision["source"]))
+    if decision["action"] == "review" and ctx.config.enable_llm:
+        model_id = assignments.get("reviewer")
+        valid = {c.clause_id for c in clauses}
+        wanted = list(dict.fromkeys(cid for cid in decision["clause_ids"] if cid in valid))
+        if model_id and wanted:
+            signature = hashlib.sha256(json.dumps([model_id, wanted, context["defects"],
+                ctx.contract.review_context.get("context_fingerprint")], sort_keys=True).encode()).hexdigest()
+            if signature not in ctx.shared.setdefault("review_assignments", set()):
+                ctx.shared["review_assignments"].add(signature)
+                ctx.emit("orchestrator", "reviewer", "review.assign", {
+                    "model_id": model_id, "clause_ids": wanted, "reason": decision["reason"],
+                    "assignment_id": signature, "source": decision["source"]})
+    return {"notes": [f"主脑{stage}｜{decision['source']}｜{decision['action']}", decision["reason"]],
+            "model": getattr(ctx.config, "planner_model", "") if decision["source"] == "llm" else "rules-router"}
 
 
 def _handle_reviewer(ctx: AgentContext) -> dict[str, Any]:
@@ -168,40 +162,72 @@ def _handle_reviewer(ctx: AgentContext) -> dict[str, Any]:
     if not assignments:
         return {"notes": ["未收到复核指派"]}
     task = assignments[-1].payload
-    endpoint = str(task.get("endpoint") or "").strip()
-    model = str(task.get("model") or "legalone-8b")
+    if not ctx.config.enable_llm:
+        return {"notes": ["大模型已关闭，保留复核待办"]}
+    assignment_id = task.get("assignment_id")
+    completed = ctx.shared.setdefault("review_completed", set())
+    if assignment_id and assignment_id in completed:
+        return {"notes": ["已执行相同复核指派，复用已有结果"]}
+    attempts = ctx.shared.setdefault("review_attempts", {})
+    attempt_key = assignment_id or str(len(assignments))
+    if attempts.get(attempt_key, 0) >= 2:
+        return {"notes": ["复核尝试达到上限，保留人工待办"], "status": "pending"}
+    model_id = str(task.get("model_id") or "strong")
     wanted = list(task.get("clause_ids") or [])
     clauses = [c for c in (ctx.shared.get("clauses") or []) if c.clause_id in wanted]
     if not clauses:
         return {"notes": ["指派条款不在切分结果内"]}
 
-    # 单独造一份只指向强模型端点的配置，避免动到主配置
-    clone = Config(**{**ctx.config.__dict__}) if hasattr(ctx.config, "__dict__") else ctx.config
-    clone.enable_llm = True
-    clone.llm_endpoint = endpoint
-    clone.llm_model = model
+    pending_reviews = ctx.shared.setdefault("review_pending", {})
+    pending_reviews[attempt_key] = {"model_id": model_id, "clause_ids": wanted,
+                                   "attempts": attempts.get(attempt_key, 0), "reason": "review_incomplete"}
+    # Endpoint and credentials come exclusively from the registered route.
+    try:
+        clone = _supervisor(ctx).config_for("reviewer", model_id)
+    except (TypeError, ValueError):
+        return {"notes": ["复核模型路由不可用，保留待办"], "status": "pending"}
+    if not clone.enable_llm or not clone.llm_endpoint:
+        return {"notes": ["复核模型不可用，保留待办"]}
+    model = clone.llm_model
     clone.llm_max_clauses = len(clauses)
-    # 强模型慢：沿用 cheap 档的 90 s 会把每条都判成超时（实测 8B 4bit 256 token 约 110 s）
-    clone.llm_timeout = float(getattr(ctx.config, "llm_strong_timeout", 600.0) or 600.0)
 
     started = time.time()
-    outcome = N.node_logic(ctx.contract, clone, clauses=clauses)
+    attempts[attempt_key] = attempts.get(attempt_key, 0) + 1
+    pending_reviews[attempt_key]["attempts"] = attempts[attempt_key]
+    try:
+        outcome = N.node_logic(ctx.contract, clone, clauses=clauses)
+    except Exception:
+        ctx.degraded.append("reviewer:execution_failed")
+        return {"notes": ["专家复核执行异常，保留待办"], "model": model, "status": "error"}
     elapsed = time.time() - started
     # 只要模型产出的结论：规则与检测器在 cheap 档已经跑过一遍，不能重复计数
     candidates = [c for c in outcome.candidates if "llm" in str(getattr(c, "source", ""))]
-    ctx.shared["review"] = candidates
+    ctx.shared["review"] = dedupe_candidates(list(ctx.shared.get("review") or []) + candidates)
+    complete = outcome.llm.get("complete") is True
+    if assignment_id and complete:
+        completed.add(assignment_id)
+    if complete:
+        pending_reviews.pop(attempt_key, None)
+    else:
+        pending_reviews[attempt_key] = {"model_id": model_id, "clause_ids": wanted,
+                                       "attempts": attempts[attempt_key], "reason": "review_incomplete"}
+    ctx.degraded.extend(f"reviewer:{reason}" for reason in outcome.degraded)
     payload = {
         "clauses": len(clauses),
         "candidates": len(candidates),
         "model": model,
         "seconds": round(elapsed, 1),
         "codes": [c.code for c in candidates][:8],
+        "complete": complete,
     }
-    ctx.emit("reviewer", "judge", "review.done", payload)
+    kind = "review.done" if complete else "review.pending"
+    ctx.emit("reviewer", "judge", kind, payload)
+    ctx.emit("reviewer", "orchestrator", kind, payload)
     notes = [f"{model} 复核 {len(clauses)} 条 → {len(candidates)} 条结论（{elapsed:.0f}s）"]
     if outcome.degraded:
         notes.append("降级：" + "；".join(outcome.degraded[:2]))
-    return {"notes": notes, "candidates": candidates}
+    return {"notes": notes, "candidates": candidates, "model": model,
+            "status": "ok" if complete else "pending"}
 
 
 def _handle_ner(ctx: AgentContext) -> dict[str, Any]:
@@ -226,7 +252,7 @@ def _handle_ner(ctx: AgentContext) -> dict[str, Any]:
         "amounts": [e["value"] for e in elements if e["kind"] == "amount"][:6],
         "dates": [e["value"] for e in elements if e["kind"] == "date"][:6],
     }
-    # 要素沿三条边同时下发——这正是"要素经边同时送③④"的实现
+    # 要素供主体、法条和终评汇合使用；逻辑分支直接处理合同上下文。
     for peer in TOPOLOGY["ner"]:
         ctx.emit("ner", peer, "elements.extracted", payload)
     return {"notes": [outcome.summary()] + outcome.degraded[:2]}
@@ -433,6 +459,7 @@ def _live_feedback_request(ctx: AgentContext):
     checks = list(statute.get("risk_checks") or [])
     subject_feedback = _subject_fact_feedback(ctx, subject)
     feedback_key = hashlib.sha256(json.dumps({"checks": checks,
+        "review_context_fingerprint": ctx.contract.review_context.get("context_fingerprint"),
         "facts": subject.get("fact_checks", []), "subject_feedback": subject_feedback,
         "verification_results": subject.get("verification_results", []),
         "verification_complete": subject.get("verification_complete"),
@@ -686,29 +713,35 @@ def _attach_current_feedback(ctx: AgentContext, candidates: Sequence[RiskCandida
 
 def _handle_logic(ctx: AgentContext) -> dict[str, Any]:
     previous = ctx.shared.get("logic")
+    selected_route = ctx.shared.get("model_assignments", {}).get("logic", "default")
+    route_changed = selected_route != ctx.shared.get("logic_executed_route", selected_route)
     feedback_key, checks, subject, focus, relevant_checks, subject_feedback = _feedback_request(ctx)
     if previous is None:
-        outcome = N.node_logic(ctx.contract, _cfg_for("logic", ctx.config))
+        outcome = N.node_logic(ctx.contract, _cfg_for("logic", ctx.config, ctx))
+        ctx.shared["logic_executed_route"] = selected_route
     else:
         # 原全文结果保留；仅对新增逐项证据涉及的条款补跑模型，避免每轮全文重复调用。
         outcome = copy.deepcopy(previous)
         items, graph = _review_work_state(ctx)
         dispatch = ctx.shared["incremental_dispatch"].plan(items, graph, int(ctx.shared.get("round", 1)))
-        reuse_only = bool(dispatch["reused_work_item_ids"] and not dispatch["dispatch_work_item_ids"])
+        reuse_only = bool(dispatch["reused_work_item_ids"] and not dispatch["dispatch_work_item_ids"] and not route_changed)
         ctx.shared["last_incremental_dispatch"] = dispatch
+        if route_changed:
+            ctx.shared.setdefault("processed_feedback", set()).discard(feedback_key)
         if feedback_key not in ctx.shared.setdefault("processed_feedback", set()) and not reuse_only:
             if focus and getattr(ctx.config, "enable_llm", False):
                 clauses = [c for c in ctx.contract.document.clauses if c.clause_id in focus]
                 # 同一 focus 上的支持/中性结果也要核对；其他条款仍保留在法条审计，
                 # 但不应被记成本次局部模型回环未送达的反馈。
-                fresh = N.node_logic(ctx.contract, _cfg_for("logic", ctx.config), clauses=clauses,
+                fresh = N.node_logic(ctx.contract, _cfg_for("logic", ctx.config, ctx), clauses=clauses,
                                      verification_feedback=relevant_checks,
                                      subject_fact_feedback=subject_feedback)
+                ctx.shared["logic_executed_route"] = selected_route
                 outcome.candidates = dedupe_candidates(outcome.candidates + fresh.candidates)
                 attempt_index = len(outcome.payload.get("feedback_runs", [])) + 1
                 attempt_binding = {"attempt_id": stable_id("fb_attempt", ctx.contract.contract_id,
                         feedback_key, ctx.shared.get("round", 1), attempt_index, length=24),
-                    "attempt_index": attempt_index, "fingerprint": feedback_key,
+                    "attempt_index": attempt_index, "fingerprint": feedback_key, "model_id": selected_route,
                     "round": ctx.shared.get("round", 1),
                     "run_sha256": hashlib.sha256(json.dumps(fresh.llm, sort_keys=True,
                         ensure_ascii=False, separators=(",", ":"), allow_nan=False).encode("utf-8")).hexdigest()}
@@ -759,7 +792,9 @@ def _handle_logic(ctx: AgentContext) -> dict[str, Any]:
         "focus_clause_ids": focus, "round": ctx.shared.get("round", 1)}
     for peer in TOPOLOGY["logic"]:
         ctx.emit("logic", peer, "defects.detected", payload)
-    return {"notes": [outcome.summary(), outcome.payload["cross_validation"]], "candidates": candidates}
+    chosen = _cfg_for("logic", ctx.config, ctx)
+    return {"notes": [outcome.summary(), outcome.payload["cross_validation"]], "candidates": candidates,
+            "model": chosen.llm_model if chosen.enable_llm else "rules"}
 
 
 def _handle_subject(ctx: AgentContext) -> dict[str, Any]:
@@ -839,7 +874,7 @@ def _handle_judge(ctx: AgentContext) -> dict[str, Any]:
         logic_cands + subject_cands + review_cands,
         agent_results,
         ctx.contract,
-        _cfg_for("judge", ctx.config),
+        _cfg_for("judge", ctx.config, ctx),
     )
     unresolved = {str(item.get("candidate_id")) for item in
                   getattr(statute, "payload", {}).get("risk_checks", [])
@@ -847,6 +882,9 @@ def _handle_judge(ctx: AgentContext) -> dict[str, Any]:
     pending_ids = {stable_id("rk", c.code, c.candidate_id) for c in logic_cands + subject_cands
                    if c.candidate_id in unresolved or c.extra.get("cross_validation_status") == "pending_manual"}
     for risk in fused:
+        if ctx.shared.get("supervisor_manual") or ctx.shared.get("review_pending"):
+            risk.review_required = True
+            risk.rationale += "；主脑请求人工处理或专家复核尚未完成，请人工核对；保留原始评分及证据状态。"
         if risk.risk_id in pending_ids:
             risk.review_required = True
             risk.rationale += "；存在逐项法条关系冲突、神经模型与规则判别分歧或输入覆盖不完整，保留原始结果与限制；回环稳定不代表这些待核验原因已消除，请人工核对。"
@@ -854,7 +892,8 @@ def _handle_judge(ctx: AgentContext) -> dict[str, Any]:
                and evidence.extra.get("current") and evidence.extra.get("pending_manual") for evidence in risk.evidence):
             risk.review_required = True
             risk.rationale += "；当前模型逐项反馈存在不支持、待核验、校验失败或意见分歧，请查看本项模型反馈证据后人工复核；未自动删除风险或调整评分。"
-    outcome = N.node_judge(fused, _cfg_for("judge", ctx.config), ctx.contract)
+    judge_config = _cfg_for("judge", ctx.config, ctx)
+    outcome = N.node_judge(fused, judge_config, ctx.contract)
     _register_outcome(ctx, outcome)
     ctx.shared["judge"] = outcome
     ctx.shared["fused"] = fused
@@ -867,7 +906,8 @@ def _handle_judge(ctx: AgentContext) -> dict[str, Any]:
     }
     # ⑤ 是终点（TOPOLOGY["judge"] 为空），没有下游可发；保留 payload 供轨迹展示
     ctx.shared["judge_payload"] = payload
-    return {"notes": [outcome.summary()] + outcome.degraded[:2], "score": outcome.payload.get("score", 100)}
+    return {"notes": [outcome.summary()] + outcome.degraded[:2], "score": outcome.payload.get("score", 100),
+            "model": judge_config.llm_model if judge_config.enable_llm else "rules"}
 
 
 HANDLERS: dict[str, Callable[[AgentContext], dict[str, Any]]] = {
@@ -957,8 +997,8 @@ class MultiAgentRun:
         return json.dumps(payload, ensure_ascii=False, indent=2)
 
 
-# 调度顺序 = 拓扑的拓扑排序结果（固定写出来，便于复现与文档引用）
-# 主脑出现两次：开工前派活，logic 回报缺陷后再派一次强模型复核。
+# 可复现的默认执行顺序；同层职责分支按资源顺序运行，不构成彼此的数据前置。
+# 通信图含反馈回边，因此该顺序并非整张图的拓扑排序。
 SCHEDULE: tuple[str, ...] = (
     "intake", "orchestrator", "ner", "logic", "reviewer", "subject", "statute", "judge",
 )
@@ -1007,8 +1047,8 @@ def run_multi_agent(
     ctx.shared["round"] = 1
     _step("intake")
     _step("orchestrator")
-    _step("ner")
-    _step("logic")
+    for branch in CORE_STAGES[1]:
+        _step(branch)
     if bus.inbox("orchestrator", kinds=["defects.detected"]):
         _step("orchestrator")
         _step("reviewer")
@@ -1038,6 +1078,15 @@ def run_multi_agent(
     termination = "round_limit"
     for round_no in range(2, maximum + 1):
         ctx.shared["round"] = round_no
+        if not ctx.shared.get("supervisor_manual"):
+            ctx.shared["supervisor_stage"] = "feedback"
+            _step("orchestrator")
+        if ctx.shared.get("supervisor_manual"):
+            termination = "supervisor_manual_review"
+            break
+        assigned = bus.inbox("reviewer", kinds=["review.assign"])
+        if assigned and assigned[-1].payload.get("assignment_id") not in ctx.shared.get("review_completed", set()):
+            _step("reviewer")
         before = fingerprint()
         work_before, _ = _review_work_state(ctx)
         def work_state_key(items: list[dict[str, Any]]) -> str:
@@ -1061,7 +1110,7 @@ def run_multi_agent(
                        "pending_subject_verification_request_ids": feedback_state["pending_subject_request_ids"],
                        "work_state_changed": work_changed, "pending_work_item_ids": pending_work_ids,
                        "incremental_dispatch": copy.deepcopy(dispatch)})
-        if not changed and not feedback_state["pending"] and not pending_work_ids:
+        if not changed and not feedback_state["pending"] and not pending_work_ids and not ctx.shared.get("review_pending"):
             termination = "stable"
             break
         no_dispatchable_work = not any(item.get("dispatchable") for item in work_after)
@@ -1069,15 +1118,20 @@ def run_multi_agent(
                 and (reuse_only or no_dispatchable_work)):
             termination = "stalled_with_pending"
             break
+    if ctx.shared.get("supervisor_manual"):
+        termination = "supervisor_manual_review"
+        ctx.degraded.append("supervisor_manual_review")
     final_feedback = _feedback_pending(ctx)
     final_items, _ = _review_work_state(ctx)
     work_ledger = ctx.shared["review_work_ledger"].snapshot()
     ctx.shared["cross_validation"] = {"rounds": rounds, "max_rounds": maximum,
         "termination": termination, "converged": termination == "stable",
+        "manual_review_requested": bool(ctx.shared.get("supervisor_manual")),
         "feedback_verification_complete": not final_feedback["pending"],
         "pending_feedback_fingerprints": [final_feedback["fingerprint"]] if final_feedback["pending"] else [],
         "pending_feedback_item_ids": final_feedback["item_ids"],
         "pending_subject_verification_request_ids": final_feedback["pending_subject_request_ids"],
+        "pending_review_assignment_ids": list(ctx.shared.get("review_pending", {})),
         "pending_work_item_ids": work_ledger["pending_work_item_ids"],
         "work_items_complete": not work_ledger["pending_work_item_ids"],
         "meaning": "结构化结论稳定不代表法律判断正确；冲突及未知事实仍需人工复核"}
@@ -1139,6 +1193,10 @@ def run_multi_agent(
         logic_llm["feedback_runs_complete"] = bool(logic_llm["feedback_runs_complete"]
             and ctx.shared["cross_validation"]["feedback_verification_complete"])
 
+    supervisor_snapshot = _supervisor(ctx).snapshot()
+    supervisor_snapshot["pending_reviews"] = list(ctx.shared.get("review_pending", {}).values())
+    supervisor_snapshot["manual_review_requested"] = bool(ctx.shared.get("supervisor_manual"))
+    ctx.degraded.extend(f"supervisor:{reason}" for reason in supervisor_snapshot.get("degraded", []))
     return MultiAgentRun(
         contract_id=contract.contract_id,
         order=[s["agent"] for s in ctx.steps],
@@ -1151,6 +1209,7 @@ def run_multi_agent(
         degraded=ctx.degraded,
         elapsed=time.time() - started,
         diagnostics={"logic_llm": logic_llm,
+                     "supervisor": supervisor_snapshot,
                      "judge_evidence": getattr(ctx.shared.get("judge"), "payload", {}),
                      "subject": getattr(ctx.shared.get("subject"), "payload", {}),
                      "judge_llm": getattr(ctx.shared.get("judge"), "llm", {}),

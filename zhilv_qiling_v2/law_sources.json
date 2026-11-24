@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "policy": "Official detail seeds only. Availability is not an effectiveness determination. Acquisitions remain unverified drafts; failures are durable receipts.",
+  "sources": [
+    {"id":"npc_civil_code","name":"最高人民法院·民法典","domains":["general","real_estate","trade"],"urls":["https://www.court.gov.cn/zixun/xiangqing/233181.html"],"availability":"official_detail_search_index_2026-11-24"},
+    {"id":"construction_law","name":"昌吉市政府·建筑法","domains":["construction"],"urls":["https://www.cj.gov.cn/p123/zxfgtl/20240322/238709.html"],"availability":"HTTP200_2026-11-24_85_articles"},
+    {"id":"securities_law","name":"证监会吉林监管局·证券法","domains":["finance","corporate"],"urls":["https://www.csrc.gov.cn/jilin/c105398/c1268060/1268060/files/%E4%B8%AD%E5%8D%8E%E4%BA%BA%E6%B0%91%E5%85%B1%E5%92%8C%E5%9B%BD%E8%AF%81%E5%88%B8%E6%B3%95(2019%E4%BF%AE%E8%AE%A2).pdf"],"availability":"HTTP200_2026-11-24_226_articles"},
+    {"id":"land_administration_law","name":"农业农村部·土地管理法","domains":["real_estate","construction"],"urls":["https://www.moa.gov.cn/gk/zcfg/fl/202007/t20200716_6348746.htm"],"availability":"HTTP200_2026-11-24_87_articles"},
+    {"id":"procurement_complaints","name":"国务院公报·政府采购质疑和投诉办法","domains":["procurement"],"urls":["https://www.gov.cn/gongbao/content/2018/content_5288825.htm"],"availability":"official_capture_2026-11-21_fixture_verified"},
+    {"id":"procurement_implementation","name":"商务部·国务院令658号政府采购法实施条例","domains":["procurement","trade"],"urls":["https://www.mofcom.gov.cn/zcfb/zgdwjjmywg/art/2015/art_2338501d371740929e5c2114efa4cfae.html"],"availability":"HTTP200_2026-11-24_79_articles"},
+    {"id":"company_law","name":"中国政府网·公司法","domains":["corporate","finance"],"urls":["https://www.gov.cn/yaowen/liebiao/202312/content_6923395.htm"],"availability":"official_detail_search_index_2026-11-24"},
+    {"id":"labor_contract_law","name":"国家市场监督管理总局·劳动合同法","domains":["labor"],"urls":["https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/bgt/art/2023/art_0abfdd261c03417b949df19d869add8d.html"],"availability":"HTTP200_2026-11-24_98_articles_root_verified"},
+    {"id":"patent_law","name":"国家知识产权局·专利法","domains":["ip"],"urls":["https://www.cnipa.gov.cn/art/2020/11/23/art_97_155167.html"],"availability":"official_detail_search_index_2026-11-24"},
+    {"id":"personal_information_law","name":"最高人民检察院·个人信息保护法","domains":["data"],"urls":["https://www.spp.gov.cn/spp/fl/202108/t20210820_527244.shtml"],"availability":"official_detail_search_index_2026-11-24"},
+    {"id":"securities_investment_fund_law","name":"国家市场监督管理总局·证券投资基金法","domains":["finance"],"urls":["https://www.samr.gov.cn/zw/zfxxgk/fdzdgknr/bgt/art/2023/art_f70635e95c74402c878c9f9a0a362c16.html"],"availability":"HTTP200_154_articles"}
+  ]
+}

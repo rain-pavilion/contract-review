@@ -139,13 +139,19 @@ def review_saved_run() -> dict:
 class ControlledTransferPlanTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.rows = C.read_jsonl(C.ROOT / "tools/acceptance_results/mamba_entail_training/pairs.jsonl")
+        pairs = C.ROOT / "tools/acceptance_results/mamba_entail_training/pairs.jsonl"
+        cls.rows = C.read_jsonl(pairs) if pairs.is_file() else None
+
+    def require_retained_pairs(self):
+        if self.rows is None:
+            self.skipTest("Pinned local training-pair evidence is not distributed in this checkout")
 
     def mocked_plan(self, rows):
         with patch.object(C, "file_sha", return_value=C.RAW_DATA_SHA), patch.object(C, "read_jsonl", return_value=rows):
             return C.build_ablation_plan(Path("FIXTURE_ONLY.jsonl"))
 
     def test_fixed_plan_balanced_and_reproducible_without_quality_claim(self):
+        self.require_retained_pairs()
         plan = C.build_ablation_plan()
         self.assertEqual(plan, C.build_ablation_plan())
         by_id = {row["pair_id"]: row for row in self.rows}
@@ -159,12 +165,14 @@ class ControlledTransferPlanTests(unittest.TestCase):
         self.assertFalse(plan["five_to_three_label_mapping"])
 
     def test_plan_has_source_group_and_template_isolation(self):
+        self.require_retained_pairs()
         for field in ("source_id", "group_id", "template_family"):
             groups = {split: {row[field] for row in self.rows if row["split"] == split} for split in ("train", "valid", "test")}
             for first, second in (("train", "valid"), ("train", "test"), ("valid", "test")):
                 self.assertFalse(groups[first] & groups[second])
 
     def test_deterministic_selection_is_not_input_row_order_or_global_rng_dependent(self):
+        self.require_retained_pairs()
         before = random.getstate()
         normal = self.mocked_plan(copy.deepcopy(self.rows))
         reverse = self.mocked_plan(list(reversed(copy.deepcopy(self.rows))))
@@ -180,6 +188,7 @@ class ControlledTransferPlanTests(unittest.TestCase):
             read.assert_not_called()
 
     def test_wrong_count_or_unmarked_supervision_is_rejected(self):
+        self.require_retained_pairs()
         wrong = copy.deepcopy(self.rows)
         wrong[0]["supervision"] = "not_declared_weak_supervision"
         for rows in (self.rows[:-1], wrong):
@@ -187,6 +196,7 @@ class ControlledTransferPlanTests(unittest.TestCase):
                 self.mocked_plan(rows)
 
     def test_each_source_group_or_template_cross_split_leak_is_rejected(self):
+        self.require_retained_pairs()
         for field in ("source_id", "group_id", "template_family"):
             rows = copy.deepcopy(self.rows)
             training = next(row for row in rows if row["split"] == "train")
@@ -196,6 +206,7 @@ class ControlledTransferPlanTests(unittest.TestCase):
                 self.mocked_plan(rows)
 
     def test_insufficient_class_is_rejected_instead_of_replacing_with_another_label(self):
+        self.require_retained_pairs()
         rows = copy.deepcopy(self.rows)
         for row in rows:
             if row["split"] == "train" and row["label"] == "entail":

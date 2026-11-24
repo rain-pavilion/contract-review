@@ -238,7 +238,7 @@ class NativeSchemaConfigurationTests(unittest.TestCase):
         with patch.object(W.urllib.request, "urlopen", return_value=Response({"data": [transformer]})):
             unverified = W.local_model_status()
         self.assertNotIn("_native_identity_verified", unverified)
-        args = SimpleNamespace(model_port=8620, with_model=False)
+        args = SimpleNamespace(model_port=8620, with_model=True)
         for status, expected in ((verified, True), (unverified, False),
                                   ({"id": W.LEGALONE_ALIAS, "ready": True}, False)):
             with self.subTest(status=status), patch.dict(os.environ, {}, clear=True), \
@@ -250,7 +250,7 @@ class NativeSchemaConfigurationTests(unittest.TestCase):
         status = {"ready": True, "backend": "llama.cpp", "_native_identity_verified": True}
         with patch.dict(os.environ, {"ZLQL_LLM_NATIVE_JSON_SCHEMA": "0"}, clear=True), \
                 patch.object(W, "local_model_status", return_value=status), patch("sys.stdout", new_callable=io.StringIO):
-            W.connect_local_model(SimpleNamespace(model_port=8620, with_model=False))
+            W.connect_local_model(SimpleNamespace(model_port=8620, with_model=True))
             self.assertEqual(os.environ["ZLQL_LLM_NATIVE_JSON_SCHEMA"], "0")
 
     def test_health_exposes_flag_without_loading_a_model(self):

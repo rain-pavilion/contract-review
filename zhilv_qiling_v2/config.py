@@ -164,6 +164,10 @@ class Config:
     默认值按"CPU、无网、无模型"这条最坏路径定，保证开箱能跑出真实结果。
     """
 
+    # --- 本次审查视角（不表示主体身份或授权已核验） ---
+    review_contract_type: str = "auto"
+    review_position: str = "neutral"
+
     # --- 切分 ---
     boundary_min_confidence: float = 0.55
     """低于该置信度的规则边界会被标 review_required，并交给统计边界分类器复核。"""
@@ -244,6 +248,8 @@ class Config:
     """模型名；空则回落环境变量 ZLQL_LLM_MODEL。"""
     llm_api_key: str = ""
     """API Key；空则回落环境变量 ZLQL_LLM_API_KEY（本地端点通常不需要）。"""
+    llm_route_explicit: bool = False
+    """内部标志：独立模型路由已绑定，空凭据也不得继承默认端点的环境值。"""
     llm_timeout: float = 90.0
     """单次请求超时（秒）。"""
     llm_max_clauses: int = 24
@@ -276,10 +282,25 @@ class Config:
     """强模型端点（如 4bit 的 LegalOne-8B）；空则不做分级复核。"""
     llm_strong_model: str = ""
     """强模型名；空则用 legalone-8b。"""
+    llm_strong_api_key: str = ""
+    """强模型独立凭据；不向另一个端点转发普通模型凭据。"""
     llm_review_top_k: int = 3
     """分级策略：规则/小模型全量过一遍后，只把风险最高的前 K 条条款交给强模型复核。"""
     llm_strong_timeout: float = 600.0
     """强模型单次超时。8B 4bit 在本机约 2.25 token/s，256 token 要 110 s，90 s 一定不够。"""
+
+    # --- 第一核心节点：主脑规划与模型路由 ---
+    enable_planner: bool = True
+    """允许模型辅助规划；同时要求 enable_llm=True 和独立主脑端点。"""
+    planner_endpoint: str = ""
+    planner_model: str = ""
+    planner_api_key: str = ""
+    planner_timeout: float = 45.0
+    planner_max_tokens: int = 1600
+    planner_max_calls: int = 4
+    """每份合同主脑实际请求上限；失败也计入预算。"""
+    model_pool_json: str = ""
+    """登记模型的 JSON 对象；密钥仅允许 api_key_env 引用环境变量。"""
 
     # --- 存储与调度（申报书：十万份级存储/检索/批量审查）---
     use_bge: bool = False
@@ -287,6 +308,13 @@ class Config:
 
     store_path: str = ""
     """审查结果库路径；空则落 ``WORKSPACE/data/reviews.sqlite``。"""
+
+    contract_library_path: str = ""
+    """隔离的合同与任务库；默认 data/libraries/contracts.sqlite。"""
+    law_library_path: str = ""
+    """独立的多领域法规版本库；默认 data/libraries/laws.sqlite。"""
+    user_library_path: str = ""
+    """独立的账户、会话与角色库；默认合同库同目录的 users.sqlite。"""
 
     # --- 多智能体编排（申报书：基于图结构引导的多智能体协作）---
     enable_multi_agent: bool = False
@@ -318,6 +346,9 @@ def config_from_env(base: Config | None = None) -> Config:
     cfg = base or Config()
     mapping: dict[str, tuple[str, type]] = {
         "ZLQL_STORE_PATH": ("store_path", str),
+        "ZLQL_CONTRACT_LIBRARY_PATH": ("contract_library_path", str),
+        "ZLQL_LAW_LIBRARY_PATH": ("law_library_path", str),
+        "ZLQL_USER_LIBRARY_PATH": ("user_library_path", str),
         "ZLQL_STATUTES_PATH": ("statutes_path", str),
         "ZLQL_CONTRACT_PACKAGES_PATH": ("contract_packages_path", str),
         "ZLQL_TOP_K": ("top_k", int),
@@ -348,8 +379,17 @@ def config_from_env(base: Config | None = None) -> Config:
         "ZLQL_ENTAILMENT_BACKEND": ("entailment_backend", str),
         "ZLQL_LLM_STRONG_ENDPOINT": ("llm_strong_endpoint", str),
         "ZLQL_LLM_STRONG_MODEL": ("llm_strong_model", str),
+        "ZLQL_LLM_STRONG_API_KEY": ("llm_strong_api_key", str),
         "ZLQL_LLM_REVIEW_TOP_K": ("llm_review_top_k", int),
         "ZLQL_LLM_STRONG_TIMEOUT": ("llm_strong_timeout", float),
+        "ZLQL_ENABLE_PLANNER": ("enable_planner", lambda v: v.strip().lower() in ("1", "true", "on", "yes")),
+        "ZLQL_PLANNER_ENDPOINT": ("planner_endpoint", str),
+        "ZLQL_PLANNER_MODEL": ("planner_model", str),
+        "ZLQL_PLANNER_API_KEY": ("planner_api_key", str),
+        "ZLQL_PLANNER_TIMEOUT": ("planner_timeout", float),
+        "ZLQL_PLANNER_MAX_TOKENS": ("planner_max_tokens", int),
+        "ZLQL_PLANNER_MAX_CALLS": ("planner_max_calls", int),
+        "ZLQL_MODEL_POOL": ("model_pool_json", str),
         "ZLQL_USE_BGE": ("use_bge", lambda v: v not in ("0", "false", "False")),
         "ZLQL_NER_MODEL": ("ner_enable_model", lambda v: v not in ("0", "false", "False")),
         "ZLQL_MULTI_AGENT": ("enable_multi_agent", lambda v: v not in ("0", "false", "False")),
@@ -364,6 +404,9 @@ def config_from_env(base: Config | None = None) -> Config:
             continue
     # 配了端点就默认开模型通道：否则"填了地址却没生效"是最难查的一类静默问题。
     # 想显式关掉用 ZLQL_ENABLE_LLM=0。
-    if cfg.llm_endpoint and os.environ.get("ZLQL_ENABLE_LLM", "1") not in ("0", "false", "False"):
+    model_switch = os.environ.get("ZLQL_ENABLE_LLM", "1").strip().lower()
+    if model_switch in ("0", "false", "off", "no"):
+        cfg.enable_llm = False
+    elif cfg.llm_endpoint or (cfg.enable_planner and cfg.planner_endpoint):
         cfg.enable_llm = True
     return cfg

@@ -247,9 +247,11 @@ class HTTPFixtureTest(unittest.TestCase):
     def test_real_product_api_mount_page_auth_and_unlabeled_dataset(self):
         from zhilv_qiling_v2 import api
         from zhilv_qiling_v2.config import Config
+        from zhilv_qiling_v2.tests_v2.http_fixtures import admin_session, prepare_admin
         config = Config(store_path=str(Path(self.tmp.name) / "product_archive.sqlite"),
             ner_use_bert=False, ner_enable_model=False, use_lsa=False,
             entailment_backend="rules", enable_llm=False)
+        prepare_admin(config, Path(self.tmp.name) / "product-libraries")
         with patch.dict("os.environ", {"ZLQL_ANNOTATION_WORKSPACE": self.tmp.name}), \
              patch.object(api, "_SERVER_CONFIG", config), \
              patch("zhilv_qiling_v2.model_runtime.initialize_backend", return_value={"active_backend": "rules"}):
@@ -258,25 +260,27 @@ class HTTPFixtureTest(unittest.TestCase):
             thread.start()
             base = f"http://127.0.0.1:{server.server_address[1]}"
             try:
+                client, csrf = admin_session(base)
                 for path in ("/annotations", "/annotation.html"):
-                    with urllib.request.urlopen(base + path, timeout=10) as response:
+                    with client.open(base + path, timeout=10) as response:
                         self.assertIn("独立人工标注工作台", response.read().decode("utf-8"))
                         self.assertIn("text/html", response.headers["Content-Type"])
-                with urllib.request.urlopen(base + "/", timeout=10) as response:
+                with client.open(base + "/workspace", timeout=10) as response:
                     self.assertIn('/annotations', response.read().decode("utf-8"))
                 with self.assertRaises(urllib.error.HTTPError) as error:
                     urllib.request.urlopen(base + "/api/annotations/datasets", timeout=10)
                 self.assertEqual(error.exception.code, 401)
-                headers = {"Authorization": "Bearer " + self.credentials["admin"]["token"], "Content-Type": "application/json"}
+                headers = {"Authorization": "Bearer " + self.credentials["admin"]["token"],
+                    "Content-Type": "application/json", "X-CSRF-Token": csrf}
                 request = urllib.request.Request(base + "/api/annotations/datasets", headers=headers)
-                with urllib.request.urlopen(request, timeout=10) as response:
+                with client.open(request, timeout=10) as response:
                     result = json.load(response)
                 self.assertEqual(result["datasets"][0]["id"], self.did)
                 self.assertFalse(result["datasets"][0]["gold_ready"])
                 request = urllib.request.Request(base + "/api/annotations/datasets", headers=headers,
                     data=json.dumps({"name": "ACTUAL_HTTP_FIXTURE_NOT_HUMAN_LABELS", "rows": [candidate(2)],
                         "guidelines": "这是实际HTTP挂载测试的fixture手册，不是独立真人标注或正式金标。"}).encode("utf-8"))
-                with urllib.request.urlopen(request, timeout=10) as response:
+                with client.open(request, timeout=10) as response:
                     created = json.load(response)
                 self.assertFalse(created["gold_ready"])
                 self.assertEqual(created["status_label"], "pending_manual_annotation")

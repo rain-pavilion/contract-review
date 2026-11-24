@@ -171,7 +171,7 @@ def _report_payload(report) -> dict[str, Any]:
     risks = [risk for risk in report.risks if risk.code != "no_substantive_risk"]
     notices = [risk for risk in report.risks if risk.code == "no_substantive_risk"]
     notice_ids = {risk.risk_id for risk in notices}
-    return {
+    payload = {
         "contract_id": report.contract_id,
         "source_name": report.source_name,
         "score": report.score,
@@ -188,6 +188,10 @@ def _report_payload(report) -> dict[str, Any]:
         "stats": report.stats,
         "schema_version": report.schema_version,
     }
+    for key in ("review_framework", "review_context", "contract_context_review"):
+        if key in report.stats:
+            payload[key] = report.stats[key]
+    return payload
 
 
 def handle_health(ctx: RequestContext) -> dict[str, Any]:
@@ -266,6 +270,14 @@ def handle_health(ctx: RequestContext) -> dict[str, Any]:
             "weights": weights,
         },
         "multi_agent": {"available": True, "default": bool(getattr(config, "enable_multi_agent", False))},
+        "supervisor": {
+            "available": True,
+            "configured": bool(config.planner_endpoint and config.planner_model),
+            "enabled": bool(config.enable_planner),
+            "model": config.planner_model,
+            "max_calls": config.planner_max_calls,
+            "has_key": bool(config.planner_api_key),
+        },
         "runtime": runtime_status(),
         "last_model_probe": _LAST_MODEL_PROBE,
         "trace_id": ctx.trace_id,
@@ -371,11 +383,30 @@ def _llm_config(ctx: "RequestContext", config):
         return config
 
 
+def _review_request_options(ctx, fields=None):
+    """Read the two flat options consistently: JSON, query, then form fields."""
+    from .review_context import REVIEW_OPTION_KEYS
+    body = ctx.json_body if isinstance(ctx.json_body, dict) else {}
+    options = {key: body[key] for key in REVIEW_OPTION_KEYS if key in body}
+    for key in REVIEW_OPTION_KEYS:
+        if key in (ctx.query or {}):
+            value = ctx.query[key]
+            options[key] = value[0] if isinstance(value, (list, tuple)) and value else value
+        if fields is not None and key in fields:
+            options[key] = fields[key]
+    return options
+
+
 def handle_review(ctx: RequestContext) -> dict[str, Any]:
     started = time.perf_counter()
     config = _engine_config(ctx, ctx.config)
     config = _llm_config(ctx, config)
     fields, files = parse_multipart(ctx.body, ctx.handler.headers.get("Content-Type", ""))
+    from .review_context import apply_review_options
+    try:
+        config = apply_review_options(config, _review_request_options(ctx, fields))
+    except ValueError as exc:
+        return {"error": str(exc), "status": 400, "trace_id": ctx.trace_id}
     if fields.get("engine"):
         from dataclasses import replace as _replace
 
@@ -421,7 +452,7 @@ def _review_document(document, config, trace_id, started, parse_seconds, *, save
         review_seconds = time.perf_counter() - stage
         payload = _report_payload(report)
         stage = time.perf_counter()
-        payload.update(_workspace_context(contract, config))
+        payload.update(_workspace_context(contract, config, payload.get("review_context")))
         context_seconds = time.perf_counter() - stage
     payload.update({"feedback": {}, "saved": False, "report_id": None,
                     "created_at": _workspace_now(), "trace_id": trace_id})
@@ -524,7 +555,7 @@ def handle_analyze(ctx: RequestContext) -> dict[str, Any]:
     return {"document": document.to_dict(), "stats": document.stats, "trace_id": ctx.trace_id}
 
 
-def _workspace_context(contract, config: Config) -> dict[str, Any]:
+def _workspace_context(contract, config: Config, review_context=None) -> dict[str, Any]:
     from .graph import build_contract_graph
     from .subject_graph import check_subjects
 
@@ -534,9 +565,12 @@ def _workspace_context(contract, config: Config) -> dict[str, Any]:
     checks.update({"paths": subject.paths(), "hint": subject.query_hint(),
                    "verification_scope": "合同文本线索＋带来源导入证据；未连接外部在线登记或信用接口，未核验或过期事实保持unknown，来源标记不代表独立认证"})
     graph = build_contract_graph(contract.document.clauses, contract.elements)
+    # Engine-local refinements do not rewrite the source Contract. Its recorded
+    # review context is authoritative for the effective report classification.
+    context = review_context if isinstance(review_context, dict) else {}
     result = {"document": contract.document.to_dict(), "elements": contract.elements.to_dict(),
             "subject_checks": checks, "graph": graph.to_dict(),
-            "contract_type": contract.contract_type}
+            "contract_type": context.get("contract_type") or contract.contract_type}
     package = contract.document.stats.get("contract_package")
     if package:
         result["contract_package"] = package
@@ -582,13 +616,18 @@ def handle_contract_packages(ctx):
                     "scope": "招标文件原文检索；空白模板不证明实际签约授权，检索命中不代表模型已完成审查。"}
         if action == "review" and ctx.method == "POST":
             requested = ctx.json_body if isinstance(ctx.json_body, dict) else {}
+            from .review_context import normalize_review_options
+            try:
+                review_options = normalize_review_options(_review_request_options(ctx))
+            except ValueError as exc:
+                return {"error": str(exc), "status": 400, "trace_id": ctx.trace_id}
             _ensure_llm_request_configured(requested.get("llm", "1" if ctx.config.enable_llm else "0"), ctx.config)
         evidence = package_evidence_summary(key, store_root=store_root)
         if action == "review" and ctx.method == "POST":
             body = ctx.json_body if isinstance(ctx.json_body, dict) else {}
             worker = _ensure_queue_worker(ctx.handler.server, ctx.config)
             options = {"engine": "single" if body.get("engine") == "single" else "multi",
-                       "llm": body.get("llm", "1" if ctx.config.enable_llm else "0")}
+                       "llm": body.get("llm", "1" if ctx.config.enable_llm else "0"), **review_options}
             batch = worker.store.create_batch(options)
             descriptor = {"package_id": key, "manifest_sha256": evidence["manifest_sha256"],
                           "include_tender": body.get("include_tender") is True}
@@ -784,8 +823,13 @@ def _run_workspace_task(task, base_config):
     from dataclasses import replace
     from .pipeline import prepare
     from .workspace_queue import PermanentTaskError
+    from .review_context import apply_review_options
 
-    config = replace(base_config, enable_multi_agent=task["options"]["engine"] == "multi",
+    try:
+        config = apply_review_options(base_config, task["options"])
+    except ValueError as exc:
+        raise PermanentTaskError(str(exc)) from exc
+    config = replace(config, enable_multi_agent=task["options"]["engine"] == "multi",
         enable_llm=bool(task["options"]["llm"] and base_config.llm_endpoint))
     # The task ID is also the archive ID: recovering a lease never duplicates a saved review.
     with closing(_workspace_db(config)) as connection:
@@ -843,7 +887,10 @@ def handle_workspace_batches(ctx):
     if ctx.method == "POST":
         body = ctx.json_body if isinstance(ctx.json_body, dict) else {}
         _ensure_llm_request_configured(body.get("llm", "0"), ctx.config)
-        return worker.store.create_batch(body)
+        try:
+            return worker.store.create_batch({**body, **_review_request_options(ctx)})
+        except ValueError as exc:
+            return {"error": str(exc), "status": 400, "trace_id": ctx.trace_id}
     return {"items": worker.store.list_batches(), "persistent": True,
             "recovery": "过期租约最多30秒后恢复；已归档任务不会重复生成报告"}
 
@@ -951,9 +998,14 @@ def handle_model_probe(ctx):
 
 def handle_batch(ctx: RequestContext) -> dict[str, Any]:
     from .pipeline import batch_review, dataset_files
+    from .review_context import apply_review_options
 
     config = _engine_config(ctx, ctx.config)
     config = _llm_config(ctx, config)
+    try:
+        config = apply_review_options(config, _review_request_options(ctx))
+    except ValueError as exc:
+        return {"error": str(exc), "status": 400, "trace_id": ctx.trace_id}
     payload = ctx.json_body if isinstance(ctx.json_body, dict) else {}
     paths: list[Path] = []
     for item in payload.get("paths", []) or []:
@@ -1279,9 +1331,10 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(payload)))
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("Referrer-Policy", "same-origin")
         for key, value in (headers or {}).items():
             self.send_header(key, value)
         self.end_headers()
@@ -1307,10 +1360,13 @@ class Handler(BaseHTTPRequestHandler):
         trace_id = uuid.uuid4().hex[:12]
         parsed = urlparse(self.path)
         path = parsed.path or "/"
+        from .library_api import dispatch_request
+        if dispatch_request(self, method, parsed):
+            return
         if method == "OPTIONS":
             self._send(204, b"", "text/plain; charset=utf-8")
             return
-        if path in ("/", "/index.html"):
+        if path in ("/workspace", "/workspace/", "/workspace.html"):
             if not UI_FILE.exists():
                 self._json({"error": "webui.html 缺失", "status": 404}, 404)
                 return
@@ -1406,6 +1462,9 @@ def _env_port(default: int = 8610) -> int:
 
 class WorkspaceServer(ThreadingHTTPServer):
     def server_close(self):
+        library_worker = getattr(self, "library_worker", None)
+        if library_worker is not None:
+            library_worker.stop()
         for worker in getattr(self, "workspace_workers", {}).values():
             worker.stop()
         super().server_close()
@@ -1420,7 +1479,10 @@ def serve(host: str | None = None, port: int | None = None, *, verbose: bool = F
     httpd = WorkspaceServer((host, port), Handler)
     httpd.daemon_threads = True
     httpd.flags = ("--verbose",) if verbose else ()  # type: ignore[attr-defined]
-    _ensure_queue_worker(httpd, _SERVER_CONFIG or config_from_env())
+    # The authenticated contract queue replaces automatic execution of old,
+    # ownerless workspace tasks. Old archives remain administrator-readable.
+    from .library_api import ensure_library_worker
+    ensure_library_worker(httpd, _SERVER_CONFIG or config_from_env())
     print(f"[api] http://{host}:{httpd.server_address[1]}  版本 {VERSION_TAG}", flush=True)
     return httpd
 

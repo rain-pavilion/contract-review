@@ -8,13 +8,13 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
 PAGE = ROOT / "zhilv_qiling_v2" / "webui.html"
-NODE = shutil.which("node") or r"C:\Users\ROG\dev-tools\node-v22.20.0-win-x64\node.exe"
+NODE = shutil.which("node")
 
 
 class RuntimeSummaryTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        if not Path(NODE).is_file():
+        if not NODE:
             raise unittest.SkipTest("Node.js is required for the page renderer fixtures")
         html = PAGE.read_text(encoding="utf-8")
         cls.renderer = html[html.index("function renderRuntimeSummary(r){"):html.index("function renderGraph(){")]

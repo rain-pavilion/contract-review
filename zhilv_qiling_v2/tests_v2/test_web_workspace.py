@@ -17,6 +17,7 @@ from unittest.mock import patch
 from zhilv_qiling_v2 import api
 from zhilv_qiling_v2.config import Config
 from zhilv_qiling_v2.models import DocumentParse
+from zhilv_qiling_v2.tests_v2.http_fixtures import admin_session, prepare_admin
 
 
 SAMPLE = """房屋租赁合同
@@ -37,7 +38,7 @@ SAMPLE = """房屋租赁合同
 class WorkspaceApiTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.server = api.serve("127.0.0.1", 0)
+        cls.server = api.WorkspaceServer(("127.0.0.1", 0), api.Handler)
         cls.thread = threading.Thread(target=cls.server.serve_forever, daemon=True)
         cls.thread.start()
         cls.base = f"http://127.0.0.1:{cls.server.server_address[1]}"
@@ -54,7 +55,9 @@ class WorkspaceApiTest(unittest.TestCase):
                              ner_enable_model=False, ner_use_bert=False,
                              enable_llm=False, use_lsa=False)
         self.previous_config = api._SERVER_CONFIG
+        prepare_admin(self.config, self.temp.name)
         api._SERVER_CONFIG = self.config
+        self.client, self.csrf = admin_session(self.base)
 
     def tearDown(self):
         api._SERVER_CONFIG = self.previous_config
@@ -65,10 +68,10 @@ class WorkspaceApiTest(unittest.TestCase):
             raw = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         request = urllib.request.Request(
             self.base + path, data=raw,
-            headers={"Content-Type": content_type or "application/json"},
+            headers={"Content-Type": content_type or "application/json", "X-CSRF-Token": self.csrf},
         )
         try:
-            response = urllib.request.urlopen(request, timeout=120)
+            response = self.client.open(request, timeout=120)
         except urllib.error.HTTPError as error:
             response = error
         with response:
